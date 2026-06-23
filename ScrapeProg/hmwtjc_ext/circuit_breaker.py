@@ -27,6 +27,7 @@ class EmptyCircuitBreaker:
         self.threshold = threshold
         self.consecutive_empty = 0
         self.last_item_count = 0
+        self._closing = False
 
     @classmethod
     def from_crawler(cls, crawler):
@@ -48,10 +49,10 @@ class EmptyCircuitBreaker:
             self.consecutive_empty = 0
         else:
             self.consecutive_empty += 1
-            if self.consecutive_empty >= self.threshold:
+            if self.consecutive_empty >= self.threshold and not self._closing:
+                self._closing = True
                 logger.warning(
-                    f"Circuit breaker triggered: {self.consecutive_empty} consecutive "
-                    f"responses with no items scraped — possible IP block. "
-                    f"Closing spider '{spider.name}'."
+                    f"Circuit breaker triggered after {self.consecutive_empty} consecutive "
+                    f"responses with no items — closing spider '{spider.name}'."
                 )
                 self.crawler.engine.close_spider(spider, "circuit_breaker_empty_responses")
