@@ -19,3 +19,7 @@ EXTENSIONS = {
     "hmwtjc_ext.progress_logger.ProgressLogger": 901,
 }
 EMPTY_CIRCUIT_BREAKER_THRESHOLD = int(os.environ.get("CIRCUIT_BREAKER_THRESHOLD", "100"))
+
+# Suppress Scrapy's DEBUG/INFO flood (item-scraped lines, crawl traces, etc.)
+# Our custom extensions log at WARNING so they still appear.
+LOG_LEVEL = "WARNING"

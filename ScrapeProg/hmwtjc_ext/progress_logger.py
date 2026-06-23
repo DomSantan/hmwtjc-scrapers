@@ -43,7 +43,8 @@ class ProgressLogger:
             self.last_logged = count
             elapsed = time.time() - self.start_time if self.start_time else 0
             rate = count / elapsed if elapsed > 0 else 0
-            logger.info(
+            # WARNING so it shows through LOG_LEVEL = WARNING set in override_settings
+            logger.warning(
                 f"[progress] {count:,} items scraped "
                 f"({rate:.1f}/s, {elapsed / 60:.0f}m elapsed)"
             )
