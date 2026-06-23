@@ -99,13 +99,48 @@ log = logging.getLogger(__name__)
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+def repair_json_array(path: Path) -> bool:
+    """
+    If a JSON array file was truncated by a hard kill (missing closing ']'),
+    repair it in-place so insert_products.py can parse it. Returns True if
+    a repair was made.
+    """
+    try:
+        text = path.read_text(errors="replace").strip()
+        if not text.startswith("["):
+            return False
+        try:
+            json.loads(text)
+            return False  # already valid
+        except json.JSONDecodeError:
+            pass
+        # Strip trailing partial item and comma, then close the array
+        # Walk back from the end to find the last complete '}'
+        last_brace = text.rfind("}")
+        if last_brace == -1:
+            return False
+        repaired = text[: last_brace + 1] + "\n]"
+        try:
+            json.loads(repaired)  # verify the repair works
+        except json.JSONDecodeError:
+            return False
+        path.write_text(repaired)
+        return True
+    except Exception:
+        return False
+
+
 def count_json_records(path: Path) -> int:
     """Count items in a JSON array file, or lines for JSONL. Returns 0 on error."""
     try:
-        text = path.read_text(errors="replace")
-        text = text.strip()
+        text = path.read_text(errors="replace").strip()
         if text.startswith("["):
-            return len(json.loads(text))
+            try:
+                return len(json.loads(text))
+            except json.JSONDecodeError:
+                # Truncated array (e.g. hard-killed process) — count item lines
+                return sum(1 for line in text.splitlines()
+                           if line.strip().rstrip(",").endswith("}"))
         # JSONL fallback
         return sum(1 for line in text.splitlines() if line.strip().startswith("{"))
     except Exception:
@@ -312,6 +347,8 @@ def run_scraper(label, project_folder, sitemap_spider, url_csv, product_spider,
         if size_kb < 0.01:
             log.error(f"[{label}] Output is empty — spider yielded no items")
             return False, 0, time.time() - start
+        if not ok and repair_json_array(output_path):
+            log.warning(f"[{label}] Repaired truncated JSON array — partial data will be imported")
         records = count_json_records(output_path)
         log.info(f"[{label}] Output: {size_kb:.0f} KB — {records:,} records")
     else:
