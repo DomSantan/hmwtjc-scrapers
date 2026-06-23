@@ -1,0 +1,113 @@
+{
+  "run_date": "2026-06-23",
+  "started_at": "2026-06-23T18:34:51.658246+00:00",
+  "finished_at": "2026-06-23T21:04:59.234736+00:00",
+  "duration_minutes": 150.1,
+  "total_scrapers": 20,
+  "ran": 20,
+  "succeeded": 9,
+  "failed": 11,
+  "skipped_no_proxy": 0,
+  "results": {
+    "GrantAndStone": {
+      "status": "failed",
+      "records": 0,
+      "duration_seconds": 2
+    },
+    "DrainageOnline": {
+      "status": "failed",
+      "records": 0,
+      "duration_seconds": 3
+    },
+    "MaterialsMarket": {
+      "status": "failed",
+      "records": 0,
+      "duration_seconds": 2
+    },
+    "DrainageFittings": {
+      "status": "failed",
+      "records": 0,
+      "duration_seconds": 14
+    },
+    "DrainageSuperstore": {
+      "status": "success",
+      "records": 827,
+      "duration_seconds": 87
+    },
+    "DrainageCentral": {
+      "status": "failed",
+      "records": 0,
+      "duration_seconds": 102
+    },
+    "PlumbNation": {
+      "status": "failed",
+      "records": 0,
+      "duration_seconds": 2
+    },
+    "Screwfix": {
+      "status": "success",
+      "records": 1667,
+      "duration_seconds": 21
+    },
+    "Geberit": {
+      "status": "success",
+      "records": 8756,
+      "duration_seconds": 201
+    },
+    "Toolstation": {
+      "status": "success",
+      "records": 220,
+      "duration_seconds": 83
+    },
+    "Wickes": {
+      "status": "failed",
+      "records": 0,
+      "duration_seconds": 2
+    },
+    "PlasticPipeShop": {
+      "status": "success",
+      "records": 4215,
+      "duration_seconds": 204
+    },
+    "PlumbingSuperstore": {
+      "status": "success",
+      "records": 6624,
+      "duration_seconds": 255
+    },
+    "Wavin": {
+      "status": "success",
+      "records": 2946,
+      "duration_seconds": 371
+    },
+    "PipeDreamFittings": {
+      "status": "success",
+      "records": 16122,
+      "duration_seconds": 1448
+    },
+    "BandQ": {
+      "status": "failed",
+      "records": 0,
+      "duration_seconds": 2227
+    },
+    "VictorianPlumbing": {
+      "status": "success",
+      "records": 23838,
+      "duration_seconds": 3276
+    },
+    "PipeKit": {
+      "status": "failed",
+      "records": 3950,
+      "duration_seconds": 5406
+    },
+    "CityPlumbing": {
+      "status": "failed",
+      "records": 59311,
+      "duration_seconds": 7222
+    },
+    "BES": {
+      "status": "failed",
+      "records": 16098,
+      "duration_seconds": 9008
+    }
+  }
+}
