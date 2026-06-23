@@ -44,12 +44,13 @@ SCRAPER_WORKERS = {
 SITEMAP_TIMEOUT = 1800   # 30 min — sitemaps are always quick
 
 PRODUCT_TIMEOUTS = {
-    "BandQ":         14400,  # 4 h  — 160k URLs across 8 proxy workers
-    "Geberit":       10800,  # 3 h  — large catalogue, slow product pages
-    "Screwfix":       7200,  # 2 h  — large catalogue
-    "Toolstation":    7200,  # 2 h
+    "BandQ":            14400,  # 4 h  — 160k URLs across 8 proxy workers
+    "Geberit":          10800,  # 3 h  — large catalogue, slow product pages
+    "BES":               9000,  # 2.5 h — 15k URLs, autothrottle can slow to ~2 req/s
+    "Screwfix":          7200,  # 2 h  — large catalogue
+    "Toolstation":       7200,  # 2 h
     "VictorianPlumbing": 7200,
-    "CityPlumbing":   7200,
+    "CityPlumbing":      7200,
 }
 DEFAULT_PRODUCT_TIMEOUT = 5400  # 1.5 h for everything else
 
