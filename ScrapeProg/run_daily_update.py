@@ -18,6 +18,7 @@ import logging
 import os
 import subprocess
 import sys
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
@@ -210,6 +211,7 @@ def _run_scraper_parallel(label, project_dir, url_csv_name, product_spider,
              "-a", f"url_file={chunk_csv}", "-o", str(chunk_out)],
             cwd=project_dir, env=env, label=f"{label}:w{i}",
             timeout=timeout,
+            monitor_path=chunk_out,
         )
         chunk_csv.unlink(missing_ok=True)
         return ok, t
@@ -235,26 +237,83 @@ def _run_scraper_parallel(label, project_dir, url_csv_name, product_spider,
 
 # ── Core runner ───────────────────────────────────────────────────────────────
 
-def run_cmd(args, cwd, env=None, label="", timeout=None):
+MONITOR_INTERVAL = 300  # seconds between file-growth checks (5 min)
+
+
+def run_cmd(args, cwd, env=None, label="", timeout=None, monitor_path=None):
+    """
+    Run a subprocess with real-time stderr streaming and optional file-growth
+    monitoring. If monitor_path is set, logs output file size every 5 minutes
+    and warns if the file stops growing (possible stall / IP block).
+    """
     start = time.time()
     try:
-        result = subprocess.run(
+        proc = subprocess.Popen(
             args, cwd=cwd, env=env or os.environ.copy(),
-            capture_output=True, text=True,
-            timeout=timeout,
+            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True,
         )
+
+        def _stream_stderr():
+            for line in proc.stderr:
+                log.warning(f"[{label}] {line.rstrip()}")
+
+        stderr_thread = threading.Thread(target=_stream_stderr, daemon=True)
+        stderr_thread.start()
+
+        deadline = (start + timeout) if timeout else None
+        last_check = start
+        last_size = -1
+
+        while True:
+            try:
+                proc.wait(timeout=5)
+                break
+            except subprocess.TimeoutExpired:
+                pass
+
+            now = time.time()
+
+            if deadline and now >= deadline:
+                proc.kill()
+                proc.wait()
+                stderr_thread.join(timeout=2)
+                elapsed = now - start
+                log.error(
+                    f"[{label}] TIMED OUT after {elapsed:.0f}s "
+                    f"(limit {timeout // 60}m) — process killed"
+                )
+                return False, elapsed
+
+            if monitor_path and now - last_check >= MONITOR_INTERVAL:
+                p = Path(monitor_path)
+                elapsed_min = (now - start) / 60
+                if p.exists():
+                    size = p.stat().st_size
+                    size_kb = size / 1024
+                    if size > last_size:
+                        log.info(
+                            f"[{label}] Running {elapsed_min:.0f}m — "
+                            f"output {size_kb:,.0f} KB"
+                        )
+                        last_size = size
+                    else:
+                        log.warning(
+                            f"[{label}] Running {elapsed_min:.0f}m — "
+                            f"output NOT growing ({size_kb:,.0f} KB) — possible stall"
+                        )
+                else:
+                    log.warning(
+                        f"[{label}] Running {elapsed_min:.0f}m — "
+                        f"no output file yet"
+                    )
+                last_check = now
+
+        stderr_thread.join(timeout=5)
         elapsed = time.time() - start
-        if result.returncode != 0:
-            log.warning(f"[{label}] Non-zero exit {result.returncode}")
-        if result.stderr:
-            for line in result.stderr.strip().splitlines()[-30:]:
-                log.warning(f"[{label}] SCRAPY: {line}")
-        return result.returncode == 0, elapsed
-    except subprocess.TimeoutExpired:
-        elapsed = time.time() - start
-        limit_min = timeout // 60 if timeout else "?"
-        log.error(f"[{label}] TIMED OUT after {elapsed:.0f}s (limit {limit_min}m) — process killed")
-        return False, elapsed
+        if proc.returncode != 0:
+            log.warning(f"[{label}] Non-zero exit {proc.returncode}")
+        return proc.returncode == 0, elapsed
+
     except Exception as e:
         log.error(f"[{label}] Exception: {e}")
         return False, time.time() - start
@@ -293,6 +352,7 @@ def run_scraper(label, project_folder, sitemap_spider, url_csv, product_spider,
         [str(VENV_SCRAPY), "crawl", sitemap_spider, "-o", url_csv],
         cwd=project_dir, env=scrapy_env, label=label,
         timeout=SITEMAP_TIMEOUT,
+        # no monitor_path — sitemaps are fast, file monitoring not needed
     )
     if not ok:
         log.error(f"[{label}] Sitemap step FAILED after {t:.0f}s — skipping product step")
@@ -325,6 +385,7 @@ def run_scraper(label, project_folder, sitemap_spider, url_csv, product_spider,
             [str(VENV_PYTHON), product_spider, str(output_path)],
             cwd=project_dir, env=base_env, label=label,
             timeout=product_timeout,
+            monitor_path=output_path,
         )
         if ok:
             log.info(f"[{label}] Product step done in {t:.0f}s")
@@ -336,6 +397,7 @@ def run_scraper(label, project_folder, sitemap_spider, url_csv, product_spider,
             [str(VENV_SCRAPY), "crawl", product_spider, "-o", str(output_path)],
             cwd=project_dir, env=scrapy_env, label=label,
             timeout=product_timeout,
+            monitor_path=output_path,
         )
         if ok:
             log.info(f"[{label}] Product step done in {t:.0f}s")

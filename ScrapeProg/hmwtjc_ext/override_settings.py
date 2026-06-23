@@ -16,5 +16,6 @@ from base.settings import *  # noqa: F401, F403
 EXTENSIONS = {
     **globals().get("EXTENSIONS", {}),
     "hmwtjc_ext.circuit_breaker.EmptyCircuitBreaker": 900,
+    "hmwtjc_ext.progress_logger.ProgressLogger": 901,
 }
 EMPTY_CIRCUIT_BREAKER_THRESHOLD = int(os.environ.get("CIRCUIT_BREAKER_THRESHOLD", "100"))
