@@ -237,14 +237,17 @@ def _run_scraper_parallel(label, project_dir, url_csv_name, product_spider,
 
 # ── Core runner ───────────────────────────────────────────────────────────────
 
-MONITOR_INTERVAL = 300  # seconds between file-growth checks (5 min)
+MONITOR_INTERVAL = 300   # seconds between file-growth checks (5 min)
+MAX_STALL_CHECKS  = 3    # consecutive non-growing checks before auto-kill (15 min)
 
 
 def run_cmd(args, cwd, env=None, label="", timeout=None, monitor_path=None):
     """
     Run a subprocess with real-time stderr streaming and optional file-growth
-    monitoring. If monitor_path is set, logs output file size every 5 minutes
-    and warns if the file stops growing (possible stall / IP block).
+    monitoring. If monitor_path is set:
+      - Logs output file size every 5 minutes.
+      - After 3 consecutive checks with no growth (15 min), kills the process
+        automatically so a stalled spider doesn't block the rest of the pipeline.
     """
     start = time.time()
     try:
@@ -260,9 +263,10 @@ def run_cmd(args, cwd, env=None, label="", timeout=None, monitor_path=None):
         stderr_thread = threading.Thread(target=_stream_stderr, daemon=True)
         stderr_thread.start()
 
-        deadline = (start + timeout) if timeout else None
-        last_check = start
-        last_size = -1
+        deadline     = (start + timeout) if timeout else None
+        last_check   = start
+        last_size    = -1
+        stall_checks = 0
 
         while True:
             try:
@@ -296,15 +300,40 @@ def run_cmd(args, cwd, env=None, label="", timeout=None, monitor_path=None):
                             f"output {size_kb:,.0f} KB"
                         )
                         last_size = size
+                        stall_checks = 0
                     else:
+                        stall_checks += 1
+                        remaining = MAX_STALL_CHECKS - stall_checks
+                        if stall_checks >= MAX_STALL_CHECKS:
+                            proc.kill()
+                            proc.wait()
+                            stderr_thread.join(timeout=2)
+                            elapsed = now - start
+                            log.error(
+                                f"[{label}] STALLED {stall_checks * MONITOR_INTERVAL // 60}m "
+                                f"with no new data ({size_kb:,.0f} KB) — "
+                                f"killing and moving on"
+                            )
+                            return False, elapsed
                         log.warning(
                             f"[{label}] Running {elapsed_min:.0f}m — "
-                            f"output NOT growing ({size_kb:,.0f} KB) — possible stall"
+                            f"output NOT growing ({size_kb:,.0f} KB) — "
+                            f"possible stall ({remaining} check(s) before auto-kill)"
                         )
                 else:
+                    stall_checks += 1
+                    if stall_checks >= MAX_STALL_CHECKS:
+                        proc.kill()
+                        proc.wait()
+                        stderr_thread.join(timeout=2)
+                        elapsed = now - start
+                        log.error(
+                            f"[{label}] STALLED {stall_checks * MONITOR_INTERVAL // 60}m "
+                            f"with no output file — killing and moving on"
+                        )
+                        return False, elapsed
                     log.warning(
-                        f"[{label}] Running {elapsed_min:.0f}m — "
-                        f"no output file yet"
+                        f"[{label}] Running {elapsed_min:.0f}m — no output file yet"
                     )
                 last_check = now
 
