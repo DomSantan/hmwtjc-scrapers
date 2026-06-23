@@ -100,10 +100,10 @@ DOWNLOAD_HANDLERS = {
     "https": "scrapy_impersonate.ImpersonateDownloadHandler",
 }
 
-DOWNLOADER_MIDDLEWARES = {
-    'scrapy.downloadermiddlewares.httpproxy.HttpProxyMiddleware': 110,
-    'base.smartproxy_auth.ProxyMiddleware': 100,
-}
+# DOWNLOADER_MIDDLEWARES = {
+#     'scrapy.downloadermiddlewares.httpproxy.HttpProxyMiddleware': 110,
+#     'base.smartproxy_auth.ProxyMiddleware': 100,
+# }
 
 import os
 from dotenv import load_dotenv
