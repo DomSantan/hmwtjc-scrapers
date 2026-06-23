@@ -378,10 +378,10 @@ def run_scraper(label, project_folder, sitemap_spider, url_csv, product_spider,
         url_csv_path.unlink()
 
     ok, t = run_cmd(
-        [str(VENV_SCRAPY), "crawl", sitemap_spider, "-o", url_csv],
+        [str(VENV_SCRAPY), "crawl", sitemap_spider, "-o", url_csv,
+         "-s", "PROGRESS_LOGGER_ENABLED=0"],
         cwd=project_dir, env=scrapy_env, label=label,
         timeout=SITEMAP_TIMEOUT,
-        # no monitor_path — sitemaps are fast, file monitoring not needed
     )
     if not ok:
         log.error(f"[{label}] Sitemap step FAILED after {t:.0f}s — skipping product step")
