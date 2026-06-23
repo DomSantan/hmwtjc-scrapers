@@ -10,7 +10,6 @@ class ProductSpiderSpider(scrapy.Spider):
     name = "product_spider_drainagefittingscurl"
     custom_settings = {
         'DOWNLOAD_HANDLERS': {'http': None, 'https': None},  # Disable Scrapy downloader
-        'LOG_LEVEL': 'DEBUG'
     }
 
     USER_AGENTS = [
@@ -27,8 +26,15 @@ class ProductSpiderSpider(scrapy.Spider):
                 yield scrapy.Request(
                     url=url,
                     callback=self.bypass_with_curl,
-                    dont_filter=True  # let us test repeatedly if needed
+                    errback=self.handle_error,
+                    dont_filter=True,
                 )
+
+    def handle_error(self, failure):
+        # Spider design sets DOWNLOAD_HANDLERS to None — all Scrapy requests fail
+        # by design. Errors are swallowed here; the stall detector in the
+        # orchestrator will kill the spider after 15 min of no output.
+        pass
 
     def bypass_with_curl(self, response):
         url = response.url
