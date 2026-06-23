@@ -1,0 +1,61 @@
+name: Daily price scrape
+
+on:
+  schedule:
+    - cron: '0 2 * * *'   # 2am UTC daily
+  workflow_dispatch:        # manual trigger
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360   # 6-hour safety limit
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Cache Scrapy venv
+        uses: actions/cache@v4
+        id: scrapy-cache
+        with:
+          path: ScrapeProg/venv
+          key: scrapy-venv-${{ hashFiles('ScrapeProg/requirements.txt') }}
+
+      - name: Create Scrapy venv
+        if: steps.scrapy-cache.outputs.cache-hit != 'true'
+        run: |
+          python -m venv ScrapeProg/venv
+          ScrapeProg/venv/bin/pip install --upgrade pip
+          ScrapeProg/venv/bin/pip install -r ScrapeProg/requirements.txt
+
+      - name: Run scrapers
+        env:
+          proxy_username: ${{ secrets.SMARTPROXY_USERNAME }}
+          proxy_password: ${{ secrets.SMARTPROXY_PASSWORD }}
+        run: |
+          mkdir -p data
+          python ScrapeProg/run_daily_update.py \
+            --skip-import \
+            --results-file data/scrape_results.json
+
+      - name: Push scraped data to data branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./data
+          publish_branch: data
+          keep_files: false
+          commit_message: "data: ${{ github.run_id }} (${{ github.run_attempt }})"
+
+      - name: Trigger import workflow
+        if: always()
+        run: |
+          curl -s -o /dev/null -w "%{http_code}" -X POST \
+            -H "Authorization: token ${{ secrets.DISPATCH_PAT }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/DomSantan/how-much-will-that-job-cost/actions/workflows/daily_import.yml/dispatches \
+            -d "{\"ref\":\"main\",\"inputs\":{\"run_date\":\"$(date -u +%Y-%m-%d)\",\"scrape_run_id\":\"${{ github.run_id }}\"}}" \
+          | grep -q "^204$" && echo "Import workflow triggered" || echo "WARNING: failed to trigger import workflow"

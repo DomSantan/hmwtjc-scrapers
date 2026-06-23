@@ -1,0 +1,10 @@
+ScrapeProg/venv/
+ScrapeProg/**/__pycache__/
+ScrapeProg/**/*.pyc
+ScrapeProg/**/url.csv
+ScrapeProg/**/urls.csv
+ScrapeProg/**/_chunk_*.csv
+ScrapeProg/**/_chunk_*.json
+ScrapeProg/**/update_*.log
+data/
+*.log
