@@ -47,12 +47,16 @@ class ProductSpiderScrewfix(scrapy.Spider):
             return
 
         base_url = get_base_url(response.text, response.url)
-        metadata = extruct.extract(
-            response.text,
-            base_url=base_url,
-            syntaxes=["json-ld"],
-            uniform=True,
-        )
+        try:
+            metadata = extruct.extract(
+                        response.text,
+                        base_url=base_url,
+                        syntaxes=["json-ld"],
+                        uniform=True,
+                    )
+        except Exception as e:
+            self.logger.warning(f"extruct failed on {response.url}: {e}")
+            return
 
         items_yielded = 0
         for ld in metadata.get("json-ld", []):

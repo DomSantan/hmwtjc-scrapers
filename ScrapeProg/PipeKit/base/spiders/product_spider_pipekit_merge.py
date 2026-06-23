@@ -75,12 +75,16 @@ class PipekitMergedSpider(scrapy.Spider):
 
     def parse_product(self, response):
         base_url = get_base_url(response.text, response.url)
-        metadata = extruct.extract(
-            response.text,
-            base_url=base_url,
-            syntaxes=["json-ld"],
-            uniform=True,
-        )
+        try:
+            metadata = extruct.extract(
+                        response.text,
+                        base_url=base_url,
+                        syntaxes=["json-ld"],
+                        uniform=True,
+                    )
+        except Exception as e:
+            self.logger.warning(f"extruct failed on {response.url}: {e}")
+            return
         jsonld = metadata.get("json-ld", [])
         delivery = self._extract_delivery(response)
         scraped_at = datetime.utcnow().isoformat()
@@ -138,12 +142,16 @@ class PipekitMergedSpider(scrapy.Spider):
             return
 
         base_url = get_base_url(response.text, response.url)
-        metadata = extruct.extract(
-            response.text,
-            base_url=base_url,
-            syntaxes=["json-ld"],
-            uniform=True,
-        )
+        try:
+            metadata = extruct.extract(
+                        response.text,
+                        base_url=base_url,
+                        syntaxes=["json-ld"],
+                        uniform=True,
+                    )
+        except Exception as e:
+            self.logger.warning(f"extruct failed on {response.url}: {e}")
+            return
         jsonld = metadata.get("json-ld", [])
 
         variant_name = response.xpath(
