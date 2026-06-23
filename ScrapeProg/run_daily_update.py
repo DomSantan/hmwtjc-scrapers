@@ -16,6 +16,7 @@ import csv
 import json
 import logging
 import os
+import shutil
 import subprocess
 import sys
 import threading
@@ -452,7 +453,96 @@ def run_scraper(label, project_folder, sitemap_spider, url_csv, product_spider,
 
 # ── Batch runner ──────────────────────────────────────────────────────────────
 
-def run_all_scrapers(scrapers, proxy_env, concurrency):
+# ── Per-supplier streaming import ─────────────────────────────────────────────
+# After each scraper finishes its JSON is pushed to the data branch and a
+# targeted import is dispatched immediately — imports run during the scraping
+# window rather than all waiting until every scraper has finished.
+
+_data_branch_lock = threading.Lock()
+_data_branch_ready = False
+_DATA_BRANCH_DIR   = Path("/tmp/hmwtjc-data-branch")
+
+PRIVATE_REPO = "DomSantan/how-much-will-that-job-cost"
+PUBLIC_REPO  = "DomSantan/hmwtjc-scrapers"
+
+
+def _setup_data_branch(dispatch_pat: str) -> bool:
+    global _data_branch_ready
+    if _data_branch_ready:
+        return True
+    result = subprocess.run(
+        ["git", "clone", "--branch", "data", "--single-branch", "--depth", "1",
+         f"https://x-access-token:{dispatch_pat}@github.com/{PUBLIC_REPO}.git",
+         str(_DATA_BRANCH_DIR)],
+        capture_output=True,
+    )
+    if result.returncode != 0:
+        log.error(f"Failed to clone data branch: {result.stderr.decode()}")
+        return False
+    subprocess.run(["git", "config", "user.email", "actions@github.com"], cwd=_DATA_BRANCH_DIR)
+    subprocess.run(["git", "config", "user.name", "GitHub Actions"], cwd=_DATA_BRANCH_DIR)
+    _data_branch_ready = True
+    return True
+
+
+def push_supplier_and_dispatch(label: str, output_json: str, run_date: str) -> None:
+    """Push one supplier's JSON to the data branch then dispatch a targeted import."""
+    if not os.getenv("GITHUB_ACTIONS"):
+        return
+    dispatch_pat = os.getenv("DISPATCH_PAT", "")
+    if not dispatch_pat:
+        log.warning(f"[{label}] No DISPATCH_PAT — skipping per-supplier import")
+        return
+
+    output_path = DATA_DIR / output_json
+    if not output_path.exists():
+        log.warning(f"[{label}] No output file — skipping import dispatch")
+        return
+
+    # Serialise all git operations so concurrent suppliers don't conflict
+    with _data_branch_lock:
+        if not _setup_data_branch(dispatch_pat):
+            return
+        subprocess.run(["git", "pull", "--rebase"], cwd=_DATA_BRANCH_DIR, capture_output=True)
+        shutil.copy2(output_path, _DATA_BRANCH_DIR / output_json)
+        subprocess.run(["git", "add", output_json], cwd=_DATA_BRANCH_DIR)
+        commit = subprocess.run(
+            ["git", "commit", "-m", f"[{run_date}] Add {label} scrape data"],
+            cwd=_DATA_BRANCH_DIR, capture_output=True,
+        )
+        if commit.returncode != 0:
+            log.warning(f"[{label}] Data branch: nothing to commit (file unchanged)")
+            return
+        push = subprocess.run(["git", "push"], cwd=_DATA_BRANCH_DIR, capture_output=True)
+        if push.returncode != 0:
+            log.error(f"[{label}] Data branch push failed: {push.stderr.decode()}")
+            return
+        log.info(f"[{label}] Pushed {output_json} to data branch")
+
+    # Dispatch the per-supplier import workflow (outside the lock — just an HTTP call)
+    try:
+        result = subprocess.run(
+            ["curl", "-s", "-o", "/dev/null", "-w", "%{http_code}",
+             "-X", "POST",
+             f"https://api.github.com/repos/{PRIVATE_REPO}/actions/workflows/daily_import.yml/dispatches",
+             "-H", f"Authorization: Bearer {dispatch_pat}",
+             "-H", "Accept: application/vnd.github.v3+json",
+             "-d", json.dumps({"ref": "main", "inputs": {
+                 "run_date": run_date,
+                 "supplier": label,
+             }})],
+            capture_output=True, text=True, timeout=30,
+        )
+        http_code = result.stdout.strip()
+        if http_code == "204":
+            log.info(f"[{label}] Per-supplier import dispatched")
+        else:
+            log.error(f"[{label}] Import dispatch failed (HTTP {http_code})")
+    except Exception as e:
+        log.error(f"[{label}] Import dispatch error: {e}")
+
+
+def run_all_scrapers(scrapers, proxy_env, concurrency, run_date):
     """
     Run all scrapers with a sliding window of `concurrency` slots.
     As soon as one scraper finishes another starts — no waiting for a
@@ -460,6 +550,7 @@ def run_all_scrapers(scrapers, proxy_env, concurrency):
     """
     total = len(scrapers)
     all_results = {}
+    dispatch_threads = []
 
     log.info(f"── Starting {total} scrapers ({concurrency} concurrent) ──")
 
@@ -473,6 +564,10 @@ def run_all_scrapers(scrapers, proxy_env, concurrency):
             ): label
             for label, folder, sitemap, csv_name, product, output, needs_proxy in scrapers
         }
+        scraper_outputs = {
+            label: output
+            for label, _, __, ___, ____, output, _____ in scrapers
+        }
         for future in as_completed(futures):
             label = futures[future]
             completed = len(all_results) + 1
@@ -484,9 +579,21 @@ def run_all_scrapers(scrapers, proxy_env, concurrency):
                     f"[{label}] {status} finished in {elapsed / 60:.0f}m — "
                     f"{records:,} records ({completed}/{total} done)"
                 )
+                if ok:
+                    t = threading.Thread(
+                        target=push_supplier_and_dispatch,
+                        args=(label, scraper_outputs[label], run_date),
+                        daemon=False,
+                    )
+                    t.start()
+                    dispatch_threads.append(t)
             except Exception as e:
                 log.error(f"[{label}] Uncaught exception: {e}")
                 all_results[label] = (False, 0, 0)
+
+    log.info("Waiting for all import dispatches to complete…")
+    for t in dispatch_threads:
+        t.join(timeout=120)
 
     passed = [k for k, (ok, *_) in all_results.items() if ok]
     failed = [k for k, (ok, *_) in all_results.items() if not ok]
@@ -566,7 +673,8 @@ def main():
     if scrapers_skipped:
         log.info(f"Skipped (no proxy): {[s[0] for s in scrapers_skipped]}")
 
-    all_results = run_all_scrapers(scrapers_to_run, proxy_env, args.concurrency)
+    run_date = started_at.strftime("%Y-%m-%d")
+    all_results = run_all_scrapers(scrapers_to_run, proxy_env, args.concurrency, run_date)
 
     finished_at = datetime.now(timezone.utc)
     passed  = [k for k, (ok, _, __) in all_results.items() if ok]
