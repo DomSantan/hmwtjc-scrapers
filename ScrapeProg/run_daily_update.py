@@ -524,7 +524,7 @@ def push_supplier_and_dispatch(label: str, output_json: str, run_date: str) -> N
         if commit.returncode != 0:
             log.warning(f"[{label}] Data branch: nothing to commit (file unchanged)")
             return
-        push = subprocess.run(["git", "push"], cwd=_DATA_BRANCH_DIR, capture_output=True)
+        push = subprocess.run(["git", "push", "--set-upstream", "origin", "data"], cwd=_DATA_BRANCH_DIR, capture_output=True)
         if push.returncode != 0:
             log.error(f"[{label}] Data branch push failed: {push.stderr.decode()}")
             return
