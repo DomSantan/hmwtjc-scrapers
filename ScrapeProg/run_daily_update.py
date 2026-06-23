@@ -185,14 +185,9 @@ def run_cmd(args, cwd, env=None, label=""):
         elapsed = time.time() - start
         if result.returncode != 0:
             log.warning(f"[{label}] Non-zero exit {result.returncode}")
-            if result.stderr:
-                for line in result.stderr.strip().splitlines()[-20:]:
-                    log.warning(f"[{label}] STDERR: {line}")
-        elif result.stderr:
-            # Log stderr even on success so silent Scrapy errors are visible
-            for line in result.stderr.strip().splitlines()[-20:]:
-                if any(kw in line for kw in ("ERROR", "error", "Traceback", "Exception", "Warning")):
-                    log.warning(f"[{label}] {line}")
+        if result.stderr:
+            for line in result.stderr.strip().splitlines()[-30:]:
+                log.warning(f"[{label}] SCRAPY: {line}")
         return result.returncode == 0, elapsed
     except Exception as e:
         log.error(f"[{label}] Exception: {e}")
