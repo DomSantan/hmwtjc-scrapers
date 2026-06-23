@@ -79,13 +79,13 @@ SCRAPERS = [
     ("MaterialsMarket",   "MaterialsMarket",   "sitemap_spider_materialsmarket",    "url.csv",  "product_spider_materialsmarket",    "materialsmarket.json",    False),
     ("PipeKit",           "PipeKit",           "sitemap_spider_pipekit",            "urls.csv", "product_spider_pipekit_merged",     "pipekit.json",            False),
     ("PipeDreamFittings", "PipeDreamFittings", "sitemap_spider_pipedreamfittings",  "url.csv",  "product_spider_pipedream",          "pipedream_products.json", True),
-    ("PlasticPipeShop",   "PlasticPipeShop",   "sitemap_spider_plasticpipeshop",    "url.csv",  "product_spider_plasticpipeshop",    "plasticpipeshop.json",    False),
-    ("PlumbingSuperstore","PlumbingSuperstore","sitemap_spider_plumbingsuperstore",  "url.csv",  "fetch_products.py",                 "plumbingsuperstore.json", False),
-    ("PlumbNation",       "PlumbNation",       "sitemap_spider_plumbnation",        "url.csv",  "fetch_products.py",                 "plumbnation.json",        False),
+    ("PlasticPipeShop",   "PlasticPipeShop",   "sitemap_spider_plasticpipeshop",    "url.csv",  "product_spider_plasticpipeshop",    "plasticpipeshop.json",    True),
+    ("PlumbingSuperstore","PlumbingSuperstore","sitemap_spider_plumbingsuperstore",  "url.csv",  "fetch_products.py",                 "plumbingsuperstore.json", True),
+    ("PlumbNation",       "PlumbNation",       "sitemap_spider_plumbnation",        "url.csv",  "fetch_products.py",                 "plumbnation.json",        True),
     ("Screwfix",          "Screwfix",          "sitemap_spider_screwfix",           "url.csv",  "product_spider_screwfix",           "screwfix.json",           False),
-    ("Toolstation",       "Toolstation",       "sitemap_spider_toolstation",        "url.csv",  "fetch_products.py",                 "toolstation.json",        False),
+    ("Toolstation",       "Toolstation",       "sitemap_spider_toolstation",        "url.csv",  "fetch_products.py",                 "toolstation.json",        True),
     ("VictorianPlumbing", "VictorianPlumbing", "sitemap_spider_victorianplumbing",  "url.csv",  "product_spider_victorianplumbing",  "victorianplumbing.json",  False),
-    ("Wickes",            "Wickes",            "sitemap_spider_wickes",             "url.csv",  "fetch_products.py",                 "wickes.json",             False),
+    ("Wickes",            "Wickes",            "sitemap_spider_wickes",             "url.csv",  "fetch_products.py",                 "wickes.json",             True),
 ]
 
 # ── Logging ───────────────────────────────────────────────────────────────────
