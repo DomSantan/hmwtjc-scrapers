@@ -630,8 +630,8 @@ def main():
     parser = argparse.ArgumentParser(description="Daily price refresh pipeline")
     parser.add_argument("--proxy-user",   default=os.getenv("proxy_username", ""))
     parser.add_argument("--proxy-pass",   default=os.getenv("proxy_password", ""))
-    parser.add_argument("--concurrency",  type=int, default=3,
-                        help="Max scrapers running simultaneously (default 3)")
+    parser.add_argument("--concurrency",  type=int, default=10,
+                        help="Max scrapers running simultaneously (default 10)")
     parser.add_argument("--skip-import",  action="store_true")
     parser.add_argument("--only",         default="")
     parser.add_argument("--db-url",       default="postgresql://postgres:postgres@localhost:5433/howmuchwillthatjobcost")
