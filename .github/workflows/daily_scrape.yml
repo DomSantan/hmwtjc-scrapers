@@ -36,6 +36,7 @@ jobs:
           proxy_username: ${{ secrets.SMARTPROXY_USERNAME }}
           proxy_password: ${{ secrets.SMARTPROXY_PASSWORD }}
           DISPATCH_PAT: ${{ secrets.DISPATCH_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p data
           python ScrapeProg/run_daily_update.py \

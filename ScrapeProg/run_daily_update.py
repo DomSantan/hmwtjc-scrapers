@@ -466,12 +466,15 @@ PRIVATE_REPO = "DomSantan/how-much-will-that-job-cost"
 PUBLIC_REPO  = "DomSantan/hmwtjc-scrapers"
 
 
-def _setup_data_branch(dispatch_pat: str) -> bool:
+def _setup_data_branch() -> bool:
     global _data_branch_ready
     if _data_branch_ready:
         return True
 
-    remote = f"https://x-access-token:{dispatch_pat}@github.com/{PUBLIC_REPO}.git"
+    # Use GITHUB_TOKEN (has write access to this repo) not DISPATCH_PAT
+    # (which is only scoped for cross-repo workflow dispatch)
+    github_token = os.getenv("GITHUB_TOKEN", "")
+    remote = f"https://x-access-token:{github_token}@github.com/{PUBLIC_REPO}.git"
 
     # Try cloning the existing data branch first
     result = subprocess.run(
@@ -512,7 +515,7 @@ def push_supplier_and_dispatch(label: str, output_json: str, run_date: str) -> N
 
     # Serialise all git operations so concurrent suppliers don't conflict
     with _data_branch_lock:
-        if not _setup_data_branch(dispatch_pat):
+        if not _setup_data_branch():
             return
         subprocess.run(["git", "pull", "--rebase"], cwd=_DATA_BRANCH_DIR, capture_output=True)
         shutil.copy2(output_path, _DATA_BRANCH_DIR / output_json)
