@@ -36,6 +36,29 @@ SCRAPER_WORKERS = {
     "BandQ": 8,
 }
 
+# ── Timeouts ──────────────────────────────────────────────────────────────────
+# Per-scraper product-step timeout in seconds. Sitemap steps always use
+# SITEMAP_TIMEOUT. If a subprocess exceeds its limit it is killed and logged
+# as TIMED OUT — the pipeline moves on to the next scraper.
+
+SITEMAP_TIMEOUT = 1800   # 30 min — sitemaps are always quick
+
+PRODUCT_TIMEOUTS = {
+    "BandQ":         14400,  # 4 h  — 160k URLs across 8 proxy workers
+    "Geberit":       10800,  # 3 h  — large catalogue, slow product pages
+    "Screwfix":       7200,  # 2 h  — large catalogue
+    "Toolstation":    7200,  # 2 h
+    "VictorianPlumbing": 7200,
+    "CityPlumbing":   7200,
+}
+DEFAULT_PRODUCT_TIMEOUT = 5400  # 1.5 h for everything else
+
+# ── Circuit breaker ───────────────────────────────────────────────────────────
+# Close a spider after this many consecutive responses that yield no items.
+# Indicates an IP block returning blank/redirect pages. 0 = disabled.
+
+CIRCUIT_BREAKER_THRESHOLD = 100
+
 # ── Scraper definitions ───────────────────────────────────────────────────────
 # (label, project_folder, sitemap_spider, url_csv, product_spider, output_json, needs_proxy)
 
@@ -135,7 +158,7 @@ def _merge_json_outputs(chunk_paths: list, final_path: Path):
 
 
 def _run_scraper_parallel(label, project_dir, url_csv_name, product_spider,
-                          output_path, env, workers):
+                          output_path, env, workers, timeout=None):
     url_csv_path = project_dir / url_csv_name
     chunk_csvs = _split_url_csv(url_csv_path, workers)
     actual_workers = len(chunk_csvs)
@@ -150,6 +173,7 @@ def _run_scraper_parallel(label, project_dir, url_csv_name, product_spider,
             [str(VENV_SCRAPY), "crawl", product_spider,
              "-a", f"url_file={chunk_csv}", "-o", str(chunk_out)],
             cwd=project_dir, env=env, label=f"{label}:w{i}",
+            timeout=timeout,
         )
         chunk_csv.unlink(missing_ok=True)
         return ok, t
@@ -175,12 +199,13 @@ def _run_scraper_parallel(label, project_dir, url_csv_name, product_spider,
 
 # ── Core runner ───────────────────────────────────────────────────────────────
 
-def run_cmd(args, cwd, env=None, label=""):
+def run_cmd(args, cwd, env=None, label="", timeout=None):
     start = time.time()
     try:
         result = subprocess.run(
             args, cwd=cwd, env=env or os.environ.copy(),
             capture_output=True, text=True,
+            timeout=timeout,
         )
         elapsed = time.time() - start
         if result.returncode != 0:
@@ -189,18 +214,39 @@ def run_cmd(args, cwd, env=None, label=""):
             for line in result.stderr.strip().splitlines()[-30:]:
                 log.warning(f"[{label}] SCRAPY: {line}")
         return result.returncode == 0, elapsed
+    except subprocess.TimeoutExpired:
+        elapsed = time.time() - start
+        limit_min = timeout // 60 if timeout else "?"
+        log.error(f"[{label}] TIMED OUT after {elapsed:.0f}s (limit {limit_min}m) — process killed")
+        return False, elapsed
     except Exception as e:
         log.error(f"[{label}] Exception: {e}")
         return False, time.time() - start
 
 
+def _scrapy_env(base_env: dict, project_dir: Path) -> dict:
+    """Extend env so the circuit breaker extension is injected into every scrapy run."""
+    existing = base_env.get("PYTHONPATH", "")
+    parts = [str(SCRIPT_DIR), str(project_dir)]
+    if existing:
+        parts.append(existing)
+    return {
+        **base_env,
+        "SCRAPY_SETTINGS_MODULE": "hmwtjc_ext.override_settings",
+        "CIRCUIT_BREAKER_THRESHOLD": str(CIRCUIT_BREAKER_THRESHOLD),
+        "PYTHONPATH": ":".join(parts),
+    }
+
+
 def run_scraper(label, project_folder, sitemap_spider, url_csv, product_spider,
                 output_json, proxy_env=None, workers=1):
     """Run the full two-step pipeline for one scraper. Returns (success, record_count, elapsed)."""
-    project_dir = SCRIPT_DIR / project_folder
+    project_dir  = SCRIPT_DIR / project_folder
     url_csv_path = project_dir / url_csv
     output_path  = DATA_DIR / output_json
-    env = proxy_env or os.environ.copy()
+    base_env     = proxy_env or os.environ.copy()
+    scrapy_env   = _scrapy_env(base_env, project_dir)
+    product_timeout = PRODUCT_TIMEOUTS.get(label, DEFAULT_PRODUCT_TIMEOUT)
     start = time.time()
 
     log.info(f"[{label}] Starting sitemap step ({sitemap_spider})")
@@ -209,7 +255,8 @@ def run_scraper(label, project_folder, sitemap_spider, url_csv, product_spider,
 
     ok, t = run_cmd(
         [str(VENV_SCRAPY), "crawl", sitemap_spider, "-o", url_csv],
-        cwd=project_dir, env=env, label=label,
+        cwd=project_dir, env=scrapy_env, label=label,
+        timeout=SITEMAP_TIMEOUT,
     )
     if not ok:
         log.error(f"[{label}] Sitemap step FAILED after {t:.0f}s — skipping product step")
@@ -224,7 +271,8 @@ def run_scraper(label, project_folder, sitemap_spider, url_csv, product_spider,
         log.error(f"[{label}] URL CSV empty after sitemap step — skipping product step")
         return False, 0, time.time() - start
 
-    log.info(f"[{label}] Sitemap done in {t:.0f}s — {url_count:,} URLs found")
+    log.info(f"[{label}] Sitemap done in {t:.0f}s — {url_count:,} URLs found, "
+             f"product timeout {product_timeout // 60}m")
 
     if output_path.exists():
         output_path.unlink()
@@ -234,12 +282,13 @@ def run_scraper(label, project_folder, sitemap_spider, url_csv, product_spider,
     if workers > 1 and url_count > workers and not is_py_script:
         log.info(f"[{label}] Starting {workers} parallel workers → {output_json}")
         ok = _run_scraper_parallel(label, project_dir, url_csv, product_spider,
-                                   output_path, env, workers)
+                                   output_path, scrapy_env, workers, product_timeout)
     elif is_py_script:
         log.info(f"[{label}] Starting product step ({product_spider}) → {output_json}")
         ok, t = run_cmd(
             [str(VENV_PYTHON), product_spider, str(output_path)],
-            cwd=project_dir, env=env, label=label,
+            cwd=project_dir, env=base_env, label=label,
+            timeout=product_timeout,
         )
         if ok:
             log.info(f"[{label}] Product step done in {t:.0f}s")
@@ -249,7 +298,8 @@ def run_scraper(label, project_folder, sitemap_spider, url_csv, product_spider,
         log.info(f"[{label}] Starting product step ({product_spider}) → {output_json}")
         ok, t = run_cmd(
             [str(VENV_SCRAPY), "crawl", product_spider, "-o", str(output_path)],
-            cwd=project_dir, env=env, label=label,
+            cwd=project_dir, env=scrapy_env, label=label,
+            timeout=product_timeout,
         )
         if ok:
             log.info(f"[{label}] Product step done in {t:.0f}s")
