@@ -43,6 +43,7 @@ jobs:
             --results-file data/scrape_results.json
 
       - name: Push scraped data to data branch
+        id: push-data
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -52,7 +53,7 @@ jobs:
           commit_message: "data: ${{ github.run_id }} (${{ github.run_attempt }})"
 
       - name: Trigger import workflow
-        if: always()
+        if: steps.push-data.outcome == 'success'
         run: |
           curl -s -o /dev/null -w "%{http_code}" -X POST \
             -H "Authorization: token ${{ secrets.DISPATCH_PAT }}" \
