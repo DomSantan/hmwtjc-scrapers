@@ -17,8 +17,9 @@ class SitemapSpiderSpider(scrapy.Spider):
         response.selector.remove_namespaces()
         product_sitemaps = response.xpath("//sitemap/loc/text()").getall()
         for sitemap_url in product_sitemaps:
-            if 'products' in sitemap_url:
-                yield scrapy.Request(url=sitemap_url, callback=self.parse_product_sitemap,meta = {"impersonate":"chrome120"})
+            # Match common product sitemap URL patterns
+            if any(kw in sitemap_url.lower() for kw in ('product', 'catalogue', 'catalog', 'shop')):
+                yield scrapy.Request(url=sitemap_url, callback=self.parse_product_sitemap, meta={"impersonate": "chrome120"})
 
     def parse_product_sitemap(self,response):
         response.selector.remove_namespaces()
