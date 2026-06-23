@@ -96,14 +96,14 @@ class ProductSpiderSpider(scrapy.Spider):
         # --- WooCommerce variations (rendered in HTML) ---
         raw_data = response.xpath('//form[@class="variations_form cart"]/@data-product_variations').get()
 
+        variations = None
         if raw_data:
             try:
                 variations = json.loads(html_lib.unescape(raw_data))
             except Exception as e:
-                self.logger.error(f"Failed to parse variation JSON on {response.url}: {e}")
-                return
+                self.logger.warning(f"Malformed variation JSON on {response.url} — falling back to simple product")
 
-        if raw_data and isinstance(variations, list) and variations:
+        if isinstance(variations, list) and variations:
             for var in variations:
                 var_img = (var.get("image") or {}).get("src", "")
                 yield {
