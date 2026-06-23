@@ -452,11 +452,18 @@ def run_scraper(label, project_folder, sitemap_spider, url_csv, product_spider,
 
 # ── Batch runner ──────────────────────────────────────────────────────────────
 
-def run_batch(batch, proxy_env, batch_num, total_batches):
-    log.info(f"── Batch {batch_num}/{total_batches}: {[s[0] for s in batch]} ──")
-    results = {}
+def run_all_scrapers(scrapers, proxy_env, concurrency):
+    """
+    Run all scrapers with a sliding window of `concurrency` slots.
+    As soon as one scraper finishes another starts — no waiting for a
+    full batch to complete before the next begins.
+    """
+    total = len(scrapers)
+    all_results = {}
 
-    with ThreadPoolExecutor(max_workers=len(batch)) as pool:
+    log.info(f"── Starting {total} scrapers ({concurrency} concurrent) ──")
+
+    with ThreadPoolExecutor(max_workers=concurrency) as pool:
         futures = {
             pool.submit(
                 run_scraper,
@@ -464,20 +471,27 @@ def run_batch(batch, proxy_env, batch_num, total_batches):
                 proxy_env if needs_proxy else None,
                 SCRAPER_WORKERS.get(label, 1),
             ): label
-            for label, folder, sitemap, csv_name, product, output, needs_proxy in batch
+            for label, folder, sitemap, csv_name, product, output, needs_proxy in scrapers
         }
         for future in as_completed(futures):
             label = futures[future]
+            completed = len(all_results) + 1
             try:
-                results[label] = future.result()  # (ok, records, elapsed)
+                ok, records, elapsed = future.result()
+                all_results[label] = (ok, records, elapsed)
+                status = "✓" if ok else "✗"
+                log.info(
+                    f"[{label}] {status} finished in {elapsed / 60:.0f}m — "
+                    f"{records:,} records ({completed}/{total} done)"
+                )
             except Exception as e:
                 log.error(f"[{label}] Uncaught exception: {e}")
-                results[label] = (False, 0, 0)
+                all_results[label] = (False, 0, 0)
 
-    passed = [k for k, (ok, _, __) in results.items() if ok]
-    failed = [k for k, (ok, _, __) in results.items() if not ok]
-    log.info(f"── Batch {batch_num} complete — OK: {passed or 'none'} | Failed: {failed or 'none'} ──")
-    return results
+    passed = [k for k, (ok, *_) in all_results.items() if ok]
+    failed = [k for k, (ok, *_) in all_results.items() if not ok]
+    log.info(f"── All scrapers done — OK: {passed or 'none'} | Failed: {failed or 'none'} ──")
+    return all_results
 
 
 # ── DB import (local use only — CI uses --skip-import) ───────────────────────
@@ -509,8 +523,8 @@ def main():
     parser = argparse.ArgumentParser(description="Daily price refresh pipeline")
     parser.add_argument("--proxy-user",   default=os.getenv("proxy_username", ""))
     parser.add_argument("--proxy-pass",   default=os.getenv("proxy_password", ""))
-    parser.add_argument("--batch-size",   type=int, default=3)
-    parser.add_argument("--batch-gap",    type=int, default=30)
+    parser.add_argument("--concurrency",  type=int, default=3,
+                        help="Max scrapers running simultaneously (default 3)")
     parser.add_argument("--skip-import",  action="store_true")
     parser.add_argument("--only",         default="")
     parser.add_argument("--db-url",       default="postgresql://postgres:postgres@localhost:5433/howmuchwillthatjobcost")
@@ -552,15 +566,7 @@ def main():
     if scrapers_skipped:
         log.info(f"Skipped (no proxy): {[s[0] for s in scrapers_skipped]}")
 
-    batches = [scrapers_to_run[i:i + args.batch_size] for i in range(0, len(scrapers_to_run), args.batch_size)]
-    all_results: dict[str, tuple] = {}  # label → (ok, records, elapsed)
-
-    for i, batch in enumerate(batches, 1):
-        batch_results = run_batch(batch, proxy_env, i, len(batches))
-        all_results.update(batch_results)
-        if i < len(batches):
-            log.info(f"Waiting {args.batch_gap}s before next batch…")
-            time.sleep(args.batch_gap)
+    all_results = run_all_scrapers(scrapers_to_run, proxy_env, args.concurrency)
 
     finished_at = datetime.now(timezone.utc)
     passed  = [k for k, (ok, _, __) in all_results.items() if ok]
