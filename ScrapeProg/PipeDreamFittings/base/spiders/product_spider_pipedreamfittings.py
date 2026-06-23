@@ -103,6 +103,7 @@ class ProductSpiderSpider(scrapy.Spider):
                 self.logger.error(f"Failed to parse variation JSON on {response.url}: {e}")
                 return
 
+        if raw_data and isinstance(variations, list) and variations:
             for var in variations:
                 var_img = (var.get("image") or {}).get("src", "")
                 yield {
@@ -123,7 +124,8 @@ class ProductSpiderSpider(scrapy.Spider):
                     "breadcrumb_str": " > ".join(breadcrumb_list) if breadcrumb_list else None,
                 }
         else:
-            # Simple product — use inc-VAT price (second bdi) if present
+            # Simple product (no variations form, or WooCommerce returned false/[])
+            # Use inc-VAT price (second bdi) if present
             bdis = response.xpath('//p[contains(@class,"price")]//bdi').getall()
             inc_vat_text = ""
             if len(bdis) >= 2:
