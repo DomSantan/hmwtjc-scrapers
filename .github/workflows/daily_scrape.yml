@@ -9,6 +9,8 @@ jobs:
   scrape:
     runs-on: ubuntu-latest
     timeout-minutes: 360   # 6-hour safety limit
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
