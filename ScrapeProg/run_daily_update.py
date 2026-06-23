@@ -470,15 +470,26 @@ def _setup_data_branch(dispatch_pat: str) -> bool:
     global _data_branch_ready
     if _data_branch_ready:
         return True
+
+    remote = f"https://x-access-token:{dispatch_pat}@github.com/{PUBLIC_REPO}.git"
+
+    # Try cloning the existing data branch first
     result = subprocess.run(
         ["git", "clone", "--branch", "data", "--single-branch", "--depth", "1",
-         f"https://x-access-token:{dispatch_pat}@github.com/{PUBLIC_REPO}.git",
-         str(_DATA_BRANCH_DIR)],
+         remote, str(_DATA_BRANCH_DIR)],
         capture_output=True,
     )
     if result.returncode != 0:
-        log.error(f"Failed to clone data branch: {result.stderr.decode()}")
-        return False
+        # Branch may not exist yet — create it as an orphan
+        log.info("Data branch not found — creating orphan branch")
+        _DATA_BRANCH_DIR.mkdir(parents=True, exist_ok=True)
+        for cmd in [
+            ["git", "init"],
+            ["git", "remote", "add", "origin", remote],
+            ["git", "checkout", "--orphan", "data"],
+        ]:
+            subprocess.run(cmd, cwd=_DATA_BRANCH_DIR, capture_output=True)
+
     subprocess.run(["git", "config", "user.email", "actions@github.com"], cwd=_DATA_BRANCH_DIR)
     subprocess.run(["git", "config", "user.name", "GitHub Actions"], cwd=_DATA_BRANCH_DIR)
     _data_branch_ready = True
