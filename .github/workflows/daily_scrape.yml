@@ -3,7 +3,12 @@ name: Daily price scrape
 on:
   schedule:
     - cron: '0 2 * * *'   # 2am UTC daily
-  workflow_dispatch:        # manual trigger
+  workflow_dispatch:
+    inputs:
+      only:
+        description: 'Comma-separated scrapers to run (e.g. GrantAndStone,Wickes). Leave empty for all.'
+        required: false
+        default: ''
 
 jobs:
   scrape:
@@ -43,7 +48,8 @@ jobs:
           mkdir -p data
           python ScrapeProg/run_daily_update.py \
             --skip-import \
-            --results-file data/scrape_results.json
+            --results-file data/scrape_results.json \
+            ${{ inputs.only && format('--only {0}', inputs.only) || '' }}
 
       - name: Push scraped data to data branch
         id: push-data
