@@ -123,18 +123,7 @@ class PipekitMergedSpider(scrapy.Spider):
                     **delivery,
                 }
 
-                if offer_url and offer_url.rstrip("/") != response.url.rstrip("/"):
-                    yield scrapy.Request(
-                        url=offer_url,
-                        callback=self.parse_variant,
-                        meta={
-                            "impersonate": "chrome120",
-                            "base_product": base_product,
-                        },
-                        dont_filter=True,
-                    )
-                else:
-                    yield base_product
+                yield base_product
 
     def parse_variant(self, response):
         if response.status != 200:
