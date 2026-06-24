@@ -72,7 +72,7 @@ SCRAPERS = [
     ("Wavin",             "Wavin",             "sitemap_spider_wavin",              "url.csv",  "product_spider_wavin",              "wavin.json",              False),
     ("CityPlumbing",      "CityPlumbing",      "sitemap_spider_cityplumbing",       "url.csv",  "product_spider_cityplumbing",       "cityplumbing.json",       False),
     ("DrainageCentral",   "DrainageCentral",   "sitemap_spider_drainagecentral",    "url.csv",  "product_spider_drainagecentral",    "drainagecentral.json",    False),
-    ("DrainageFittings",  "DrainageFittings",  "sitemap_spider_drainagefittings",   "url.csv",  "product_spider_drainagefittingscurl",   "drainagefittings.json",   True),
+    ("DrainageFittings",  "DrainageFittings",  "sitemap_spider_drainagefittings",   "url.csv",  "product_spider_drainagefittings",       "drainagefittings.json",   False),
     ("DrainageOnline",    "DrainageOnline",    "sitemap_spider_drainageonline",     "urls.csv", "product_spider_drainageonline",     "drainageonline.json",     False),
     ("DrainageSuperstore","DrainageSuperstore","sitemap_spider_drainagesuperstore", "urls.csv", "product_spider_drainagesuperstore", "drainagesuperstore.json", False),
     ("GrantAndStone",     "GrantAndStone",     "url_gather",                        "url.csv",  "fetch_products_grantandstone.py",   "grantandstone.json",      False),
