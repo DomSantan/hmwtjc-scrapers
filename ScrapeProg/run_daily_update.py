@@ -368,7 +368,7 @@ def run_scraper(label, project_folder, sitemap_spider, url_csv, product_spider,
                 output_json, proxy_env=None, workers=1):
     """Run the full two-step pipeline for one scraper. Returns (success, record_count, elapsed)."""
     project_dir  = SCRIPT_DIR / project_folder
-    url_csv_path = project_dir / url_csv
+    url_csv_path = project_dir / url_csv if url_csv else None
     output_path  = DATA_DIR / output_json
     base_env     = proxy_env or os.environ.copy()
     scrapy_env   = _scrapy_env(base_env, project_dir)
