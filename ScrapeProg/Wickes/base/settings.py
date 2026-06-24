@@ -100,6 +100,15 @@ DOWNLOAD_HANDLERS = {
     "https": "scrapy_impersonate.ImpersonateDownloadHandler",
 }
 
+CONCURRENT_REQUESTS = 4
+DOWNLOAD_DELAY = 0.5
+RANDOMIZE_DOWNLOAD_DELAY = True
+AUTOTHROTTLE_ENABLED = True
+AUTOTHROTTLE_START_DELAY = 0.5
+AUTOTHROTTLE_MAX_DELAY = 10
+AUTOTHROTTLE_TARGET_CONCURRENCY = 2
+RETRY_HTTP_CODES = [429, 500, 502, 503, 504]
+
 # DOWNLOADER_MIDDLEWARES = {
 #     'scrapy.downloadermiddlewares.httpproxy.HttpProxyMiddleware': 110,
 #     'base.smartproxy_auth.ProxyMiddleware': 100,
