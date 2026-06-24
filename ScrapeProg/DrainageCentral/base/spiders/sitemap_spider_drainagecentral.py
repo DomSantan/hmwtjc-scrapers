@@ -15,9 +15,10 @@ class SitemapSpiderSpider(scrapy.Spider):
             self.logger.error(f"Failed to fetch sitemap: {response.status}")
             return
         response.selector.remove_namespaces()
-        product_urls = response.xpath("//url/loc/text()").getall()
-        for url in product_urls:
-            yield {"url":url}
+        for url in response.xpath("//url/loc/text()").getall():
+            # Category pages end with /; product pages don't
+            if not url.rstrip().endswith("/"):
+                yield {"url": url}
 
 
 
