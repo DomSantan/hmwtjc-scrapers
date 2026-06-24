@@ -76,7 +76,8 @@ SCRAPERS = [
     ("DrainageFittings",  "DrainageFittings",  "sitemap_spider_drainagefittings",   "url.csv",  "product_spider_drainagefittings",       "drainagefittings.json",   False),
     ("DrainageOnline",    "DrainageOnline",    "sitemap_spider_drainageonline",     "urls.csv", "product_spider_drainageonline",     "drainageonline.json",     False),
     ("DrainageSuperstore","DrainageSuperstore","sitemap_spider_drainagesuperstore", "urls.csv", "product_spider_drainagesuperstore", "drainagesuperstore.json", False),
-    ("GrantAndStone",     "GrantAndStone",     None,                                None,       "fetch_products_grantandstone.py",   "grantandstone.json",      True),
+    # GrantAndStone: migrated to builditonline.co.uk — old Magento store abandoned
+    # ("GrantAndStone", "GrantAndStone", None, None, "fetch_products_grantandstone.py", "grantandstone.json", True),
     ("MaterialsMarket",   "MaterialsMarket",   "sitemap_spider_materialsmarket",    "url.csv",  "product_spider_materialsmarket",    "materialsmarket.json",    False),
     ("PipeKit",           "PipeKit",           "sitemap_spider_pipekit",            "urls.csv", "product_spider_pipekit_merged",     "pipekit.json",            False),
     ("PipeDreamFittings", "PipeDreamFittings", "sitemap_spider_pipedreamfittings",  "url.csv",  "product_spider_pipedream",          "pipedreamfittings.json",  False),
