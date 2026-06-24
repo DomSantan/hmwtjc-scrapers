@@ -8,7 +8,7 @@ import sys
 import time
 from datetime import datetime, timezone
 
-import requests
+from curl_cffi import requests
 
 BASE_URL = "https://www.grantandstone.co.uk"
 GRAPHQL = f"{BASE_URL}/graphql"
@@ -55,6 +55,7 @@ def fetch_page(page: int) -> dict:
                 json={"query": QUERY, "variables": {"page": page}},
                 headers=HEADERS,
                 timeout=30,
+                impersonate="chrome120",
             )
             resp.raise_for_status()
             return resp.json()["data"]["products"]

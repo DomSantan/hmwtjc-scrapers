@@ -100,3 +100,8 @@ DOWNLOAD_HANDLERS = {
     "https": "scrapy_impersonate.ImpersonateDownloadHandler",
 }
 
+# Rate-limit to avoid triggering server-side IP throttling
+CONCURRENT_REQUESTS = 2
+DOWNLOAD_DELAY = 0.5
+RANDOMIZE_DOWNLOAD_DELAY = True
+
