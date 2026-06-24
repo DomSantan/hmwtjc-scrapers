@@ -1,18 +1,18 @@
 {
   "run_date": "2026-06-24",
-  "started_at": "2026-06-24T12:04:47.544603+00:00",
-  "finished_at": "2026-06-24T12:06:25.999285+00:00",
-  "duration_minutes": 1.6,
+  "started_at": "2026-06-24T13:25:31.973704+00:00",
+  "finished_at": "2026-06-24T14:42:16.703906+00:00",
+  "duration_minutes": 76.7,
   "total_scrapers": 19,
   "ran": 1,
-  "succeeded": 0,
-  "failed": 1,
+  "succeeded": 1,
+  "failed": 0,
   "skipped_no_proxy": 0,
   "results": {
     "DrainageCentral": {
-      "status": "failed",
-      "records": 0,
-      "duration_seconds": 98
+      "status": "success",
+      "records": 27099,
+      "duration_seconds": 4599
     }
   }
 }
