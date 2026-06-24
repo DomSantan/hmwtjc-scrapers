@@ -9,7 +9,7 @@ class ProductSpiderSpider(scrapy.Spider):
     supplier_name = "Grant and Stone"
 
     def start_requests(self):
-        with open("drainsurl.csv", "r") as f:
+        with open("url.csv", "r") as f:
             reader = csv.DictReader(f)
             for row in reader:
                 url = row['url'].strip()
