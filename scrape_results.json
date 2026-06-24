@@ -1,8 +1,8 @@
 {
   "run_date": "2026-06-24",
-  "started_at": "2026-06-24T17:03:41.394047+00:00",
-  "finished_at": "2026-06-24T18:31:13.223956+00:00",
-  "duration_minutes": 87.5,
+  "started_at": "2026-06-24T19:08:59.402094+00:00",
+  "finished_at": "2026-06-24T20:36:01.483376+00:00",
+  "duration_minutes": 87.0,
   "total_scrapers": 19,
   "ran": 1,
   "succeeded": 1,
@@ -11,8 +11,8 @@
   "results": {
     "PipeKit": {
       "status": "success",
-      "records": 23668,
-      "duration_seconds": 5247
+      "records": 24367,
+      "duration_seconds": 5216
     }
   }
 }
