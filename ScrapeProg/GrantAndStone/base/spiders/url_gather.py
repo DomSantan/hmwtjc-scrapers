@@ -1,57 +1,43 @@
+import json
 import scrapy
+
+
+GRAPHQL = "https://www.grantandstone.co.uk/graphql"
+BASE_URL = "https://www.grantandstone.co.uk"
+PAGE_SIZE = 100
+
+QUERY = """
+query GetUrls($page: Int!) {
+    products(search: "", pageSize: 100, currentPage: $page, sort: {name: ASC}) {
+        page_info { total_pages }
+        items { url_key }
+    }
+}
+"""
 
 
 class UrlGatherSpider(scrapy.Spider):
     name = "url_gather"
 
-    # Seed: top-level building and plumbing category pages.
-    # The spider will discover all sub-categories from here.
-    start_urls = [
-        "https://www.grantandstone.co.uk/building",
-        "https://www.grantandstone.co.uk/plumbing",
-    ]
-    custom_settings = {"DEPTH_LIMIT": 3}
-
     def start_requests(self):
-        for url in self.start_urls:
-            yield scrapy.Request(url, meta={"impersonate": "chrome120"},
-                                 callback=self.parse_category_index)
+        yield self._gql_request(page=1)
 
-    def parse_category_index(self, response):
-        """Discover all sub-category links and queue them."""
-        links = response.xpath(
-            '//a[contains(@href,"/building/") or contains(@href,"/plumbing/")]/@href'
-        ).getall()
-        seen = set()
-        for href in links:
-            # Normalise: strip query strings, anchors, trailing slashes
-            url = href.split("?")[0].split("#")[0].rstrip("/")
-            if url in seen:
-                continue
-            seen.add(url)
-            yield scrapy.Request(
-                url + "?product_list_limit=100",
-                meta={"impersonate": "chrome120"},
-                callback=self.parse_category,
-            )
+    def _gql_request(self, page):
+        return scrapy.Request(
+            url=GRAPHQL,
+            method="POST",
+            body=json.dumps({"query": QUERY, "variables": {"page": page}}),
+            headers={"Content-Type": "application/json"},
+            callback=self.parse,
+            cb_kwargs={"page": page},
+        )
 
-    def parse_category(self, response):
-        """Extract product URLs from a category listing page."""
-        product_urls = response.xpath(
-            '//li[contains(@class,"product-item")]'
-            '//a[contains(@class,"product-photo")]/@href'
-        ).getall()
+    def parse(self, response, page):
+        data = response.json()["data"]["products"]
+        total_pages = data["page_info"]["total_pages"]
 
-        for url in product_urls:
-            yield {"url": url}
+        for item in data["items"]:
+            yield {"url": f"{BASE_URL}/{item['url_key']}"}
 
-        # Follow next page if pagination exists
-        next_page = response.xpath(
-            '//a[@rel="next"]/@href | //li[contains(@class,"pages-item-next")]/a/@href'
-        ).get()
-        if next_page:
-            yield scrapy.Request(
-                next_page,
-                meta={"impersonate": "chrome120"},
-                callback=self.parse_category,
-            )
+        if page < total_pages:
+            yield self._gql_request(page + 1)

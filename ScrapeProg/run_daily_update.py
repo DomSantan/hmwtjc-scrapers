@@ -75,7 +75,7 @@ SCRAPERS = [
     ("DrainageFittings",  "DrainageFittings",  "sitemap_spider_drainagefittings",   "url.csv",  "product_spider_drainagefittingscurl",   "drainagefittings.json",   True),
     ("DrainageOnline",    "DrainageOnline",    "sitemap_spider_drainageonline",     "urls.csv", "product_spider_drainageonline",     "drainageonline.json",     False),
     ("DrainageSuperstore","DrainageSuperstore","sitemap_spider_drainagesuperstore", "urls.csv", "product_spider_drainagesuperstore", "drainagesuperstore.json", False),
-    ("GrantAndStone",     "GrantAndStone",     "url_gather",                        "url.csv",  "product_spider_grantandstone",      "grantandstone.json",      False),
+    ("GrantAndStone",     "GrantAndStone",     "url_gather",                        "url.csv",  "fetch_products_grantandstone.py",   "grantandstone.json",      False),
     ("MaterialsMarket",   "MaterialsMarket",   "sitemap_spider_materialsmarket",    "url.csv",  "product_spider_materialsmarket",    "materialsmarket.json",    False),
     ("PipeKit",           "PipeKit",           "sitemap_spider_pipekit",            "urls.csv", "product_spider_pipekit_merged",     "pipekit.json",            False),
     ("PipeDreamFittings", "PipeDreamFittings", "sitemap_spider_pipedreamfittings",  "url.csv",  "product_spider_pipedream",          "pipedreamfittings.json",  False),
