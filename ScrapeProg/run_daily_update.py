@@ -53,6 +53,7 @@ PRODUCT_TIMEOUTS = {
     "Toolstation":       7200,  # 2 h
     "VictorianPlumbing": 7200,
     "CityPlumbing":      7200,
+    "PipeKit":          10800,  # 3 h — rate-limited (DOWNLOAD_DELAY=1, CONCURRENT_REQUESTS=4)
 }
 DEFAULT_PRODUCT_TIMEOUT = 5400  # 1.5 h for everything else
 
