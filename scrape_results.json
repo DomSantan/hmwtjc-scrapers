@@ -1,18 +1,18 @@
 {
   "run_date": "2026-06-24",
-  "started_at": "2026-06-24T19:08:59.402094+00:00",
-  "finished_at": "2026-06-24T20:36:01.483376+00:00",
-  "duration_minutes": 87.0,
+  "started_at": "2026-06-24T20:34:57.160705+00:00",
+  "finished_at": "2026-06-24T20:36:37.833841+00:00",
+  "duration_minutes": 1.7,
   "total_scrapers": 19,
   "ran": 1,
   "succeeded": 1,
   "failed": 0,
   "skipped_no_proxy": 0,
   "results": {
-    "PipeKit": {
+    "Wickes": {
       "status": "success",
-      "records": 24367,
-      "duration_seconds": 5216
+      "records": 886,
+      "duration_seconds": 97
     }
   }
 }
