@@ -1,18 +1,18 @@
 {
   "run_date": "2026-06-24",
-  "started_at": "2026-06-24T20:34:57.160705+00:00",
-  "finished_at": "2026-06-24T20:36:37.833841+00:00",
-  "duration_minutes": 1.7,
+  "started_at": "2026-06-24T20:58:53.172254+00:00",
+  "finished_at": "2026-06-24T22:29:05.932320+00:00",
+  "duration_minutes": 90.2,
   "total_scrapers": 19,
   "ran": 1,
-  "succeeded": 1,
-  "failed": 0,
+  "succeeded": 0,
+  "failed": 1,
   "skipped_no_proxy": 0,
   "results": {
     "Wickes": {
-      "status": "success",
-      "records": 886,
-      "duration_seconds": 97
+      "status": "failed",
+      "records": 8825,
+      "duration_seconds": 5409
     }
   }
 }
