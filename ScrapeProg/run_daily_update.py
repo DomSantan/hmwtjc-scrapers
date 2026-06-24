@@ -593,7 +593,7 @@ def run_all_scrapers(scrapers, proxy_env, concurrency, run_date):
                     f"[{label}] {status} finished in {elapsed / 60:.0f}m — "
                     f"{records:,} records ({completed}/{total} done)"
                 )
-                if ok:
+                if records > 0:
                     t = threading.Thread(
                         target=push_supplier_and_dispatch,
                         args=(label, scraper_outputs[label], run_date),
