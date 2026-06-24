@@ -76,7 +76,7 @@ SCRAPERS = [
     ("DrainageFittings",  "DrainageFittings",  "sitemap_spider_drainagefittings",   "url.csv",  "product_spider_drainagefittings",       "drainagefittings.json",   False),
     ("DrainageOnline",    "DrainageOnline",    "sitemap_spider_drainageonline",     "urls.csv", "product_spider_drainageonline",     "drainageonline.json",     False),
     ("DrainageSuperstore","DrainageSuperstore","sitemap_spider_drainagesuperstore", "urls.csv", "product_spider_drainagesuperstore", "drainagesuperstore.json", False),
-    ("GrantAndStone",     "GrantAndStone",     "url_gather",                        "url.csv",  "fetch_products_grantandstone.py",   "grantandstone.json",      False),
+    ("GrantAndStone",     "GrantAndStone",     None,                                None,       "fetch_products_grantandstone.py",   "grantandstone.json",      False),
     ("MaterialsMarket",   "MaterialsMarket",   "sitemap_spider_materialsmarket",    "url.csv",  "product_spider_materialsmarket",    "materialsmarket.json",    False),
     ("PipeKit",           "PipeKit",           "sitemap_spider_pipekit",            "urls.csv", "product_spider_pipekit_merged",     "pipekit.json",            False),
     ("PipeDreamFittings", "PipeDreamFittings", "sitemap_spider_pipedreamfittings",  "url.csv",  "product_spider_pipedream",          "pipedreamfittings.json",  False),
@@ -375,38 +375,43 @@ def run_scraper(label, project_folder, sitemap_spider, url_csv, product_spider,
     product_timeout = PRODUCT_TIMEOUTS.get(label, DEFAULT_PRODUCT_TIMEOUT)
     start = time.time()
 
-    log.info(f"[{label}] Starting sitemap step ({sitemap_spider})")
-    if url_csv_path.exists():
-        url_csv_path.unlink()
+    if sitemap_spider is not None:
+        log.info(f"[{label}] Starting sitemap step ({sitemap_spider})")
+        if url_csv_path.exists():
+            url_csv_path.unlink()
 
-    ok, t = run_cmd(
-        [str(VENV_SCRAPY), "crawl", sitemap_spider, "-o", url_csv,
-         "-s", "PROGRESS_LOGGER_ENABLED=0"],
-        cwd=project_dir, env=scrapy_env, label=label,
-        timeout=SITEMAP_TIMEOUT,
-    )
-    if not ok:
-        log.error(f"[{label}] Sitemap step FAILED after {t:.0f}s — skipping product step")
-        return False, 0, time.time() - start
+        ok, t = run_cmd(
+            [str(VENV_SCRAPY), "crawl", sitemap_spider, "-o", url_csv,
+             "-s", "PROGRESS_LOGGER_ENABLED=0"],
+            cwd=project_dir, env=scrapy_env, label=label,
+            timeout=SITEMAP_TIMEOUT,
+        )
+        if not ok:
+            log.error(f"[{label}] Sitemap step FAILED after {t:.0f}s — skipping product step")
+            return False, 0, time.time() - start
 
-    url_count = 0
-    if url_csv_path.exists():
-        with open(url_csv_path) as f:
-            url_count = max(0, sum(1 for _ in f) - 1)
+        url_count = 0
+        if url_csv_path.exists():
+            with open(url_csv_path) as f:
+                url_count = max(0, sum(1 for _ in f) - 1)
 
-    if url_count == 0:
-        log.error(f"[{label}] URL CSV empty after sitemap step — skipping product step")
-        return False, 0, time.time() - start
+        if url_count == 0:
+            log.error(f"[{label}] URL CSV empty after sitemap step — skipping product step")
+            return False, 0, time.time() - start
 
-    log.info(f"[{label}] Sitemap done in {t:.0f}s — {url_count:,} URLs found, "
-             f"product timeout {product_timeout // 60}m")
+        log.info(f"[{label}] Sitemap done in {t:.0f}s — {url_count:,} URLs found, "
+                 f"product timeout {product_timeout // 60}m")
+    else:
+        log.info(f"[{label}] No sitemap step — running product step directly, "
+                 f"product timeout {product_timeout // 60}m")
+        url_count = 0
 
     if output_path.exists():
         output_path.unlink()
 
     is_py_script = product_spider.endswith(".py")
 
-    if workers > 1 and url_count > workers and not is_py_script:
+    if workers > 1 and url_count > workers and not is_py_script and sitemap_spider is not None:
         log.info(f"[{label}] Starting {workers} parallel workers → {output_json}")
         ok = _run_scraper_parallel(label, project_dir, url_csv, product_spider,
                                    output_path, scrapy_env, workers, product_timeout)
