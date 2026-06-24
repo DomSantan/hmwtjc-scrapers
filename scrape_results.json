@@ -1,28 +1,23 @@
 {
   "run_date": "2026-06-24",
-  "started_at": "2026-06-24T10:37:05.712938+00:00",
-  "finished_at": "2026-06-24T10:39:08.786596+00:00",
-  "duration_minutes": 2.1,
+  "started_at": "2026-06-24T10:42:59.772229+00:00",
+  "finished_at": "2026-06-24T10:43:08.562332+00:00",
+  "duration_minutes": 0.1,
   "total_scrapers": 20,
-  "ran": 3,
-  "succeeded": 1,
+  "ran": 2,
+  "succeeded": 0,
   "failed": 2,
   "skipped_no_proxy": 0,
   "results": {
     "GrantAndStone": {
       "status": "failed",
       "records": 0,
-      "duration_seconds": 2
+      "duration_seconds": 0
     },
     "DrainageFittings": {
       "status": "failed",
       "records": 0,
-      "duration_seconds": 8
-    },
-    "Wickes": {
-      "status": "success",
-      "records": 951,
-      "duration_seconds": 114
+      "duration_seconds": 9
     }
   }
 }
