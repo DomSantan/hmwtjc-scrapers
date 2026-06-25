@@ -143,6 +143,6 @@ def main(output_file):
 if __name__ == "__main__":
     import argparse
     p = argparse.ArgumentParser()
-    p.add_argument("--output", default="../../data/plumbnation.json")
+    p.add_argument("output", nargs="?", default="../../data/plumbnation.json")
     args = p.parse_args()
     sys.exit(0 if main(args.output) > 0 else 1)
