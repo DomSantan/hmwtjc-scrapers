@@ -1,0 +1,11 @@
+BOT_NAME = "base"
+SPIDER_MODULES = ["base.spiders"]
+NEWSPIDER_MODULE = "base.spiders"
+USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36"
+ROBOTSTXT_OBEY = False
+CONCURRENT_REQUESTS = 8
+DOWNLOAD_DELAY = 0.25
+RANDOMIZE_DOWNLOAD_DELAY = True
+RETRY_HTTP_CODES = [429, 500, 502, 503, 504]
+TWISTED_REACTOR = "twisted.internet.asyncioreactor.AsyncioSelectorReactor"
+FEED_EXPORT_ENCODING = "utf-8"
