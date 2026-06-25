@@ -1,9 +1,5 @@
-import json
-import os
 import scrapy
 
-
-CF_COOKIE_FILE = "cf_cookies.json"
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
     "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -11,25 +7,14 @@ USER_AGENT = (
 )
 
 
-def _cf_cookie_header():
-    if os.path.exists(CF_COOKIE_FILE):
-        with open(CF_COOKIE_FILE) as f:
-            cookies = json.load(f)
-        if cookies:
-            return "; ".join(f"{k}={v}" for k, v in cookies.items())
-    return None
-
-
 class SitemapSpiderSpider(scrapy.Spider):
     name = "sitemap_spider_plumbnation"
 
     def start_requests(self):
-        cookie = _cf_cookie_header()
-        headers = {"Cookie": cookie, "User-Agent": USER_AGENT} if cookie else {"User-Agent": USER_AGENT}
         yield scrapy.Request(
-            url="https://www.plumbnation.co.uk/sitemap.xml",
+            url="https://www.plumbnation.co.uk/sitemap_products.xml",
             meta={"impersonate": "chrome124"},
-            headers=headers,
+            headers={"User-Agent": USER_AGENT},
         )
 
     def parse(self, response):
@@ -37,5 +22,7 @@ class SitemapSpiderSpider(scrapy.Spider):
             self.logger.error(f"Failed to fetch sitemap: {response.status}")
             return
         response.selector.remove_namespaces()
-        for url in response.xpath("//url/loc/text()").getall():
+        urls = response.xpath("//url/loc/text()").getall()
+        self.logger.info(f"Found {len(urls)} product URLs in sitemap")
+        for url in urls:
             yield {"url": url}
