@@ -1,9 +1,26 @@
-import scrapy
 import csv
 import json
+import os
+import scrapy
 import extruct
 from w3lib.html import get_base_url
 from datetime import datetime
+
+
+CF_COOKIE_FILE = "cf_cookies.json"
+USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/124.0.0.0 Safari/537.36"
+)
+
+
+def _cf_cookie_header():
+    if os.path.exists(CF_COOKIE_FILE):
+        with open(CF_COOKIE_FILE) as f:
+            cookies = json.load(f)
+        return "; ".join(f"{k}={v}" for k, v in cookies.items())
+    return None
 
 
 class ProductSpiderSpider(scrapy.Spider):
@@ -11,7 +28,9 @@ class ProductSpiderSpider(scrapy.Spider):
     supplier_name = "PlumbNation"
 
     def start_requests(self):
-        with open("url.csv", "r") as f:
+        cookie = _cf_cookie_header()
+        extra_headers = {"Cookie": cookie, "User-Agent": USER_AGENT} if cookie else {"User-Agent": USER_AGENT}
+        with open("url.csv") as f:
             reader = csv.DictReader(f)
             for row in reader:
                 url = row["url"].strip()
@@ -19,7 +38,8 @@ class ProductSpiderSpider(scrapy.Spider):
                     yield scrapy.Request(
                         url=url,
                         callback=self.parse,
-                        meta={"impersonate": "chrome120"},
+                        meta={"impersonate": "chrome124"},
+                        headers=extra_headers,
                     )
 
     def _parse_images(self, image_field):
@@ -60,14 +80,14 @@ class ProductSpiderSpider(scrapy.Spider):
         }
 
     def parse(self, response):
+        if response.status in (403, 503):
+            self.logger.warning(f"CF block on {response.url} — skipping")
+            return
+
         base_url = get_base_url(response.text, response.url)
         try:
-            metadata = extruct.extract(
-                        response.text,
-                        base_url=base_url,
-                        syntaxes=["json-ld"],
-                        uniform=True,
-                    )
+            metadata = extruct.extract(response.text, base_url=base_url,
+                                       syntaxes=["json-ld"], uniform=True)
         except Exception as e:
             self.logger.warning(f"extruct failed on {response.url}: {e}")
             return
@@ -78,7 +98,6 @@ class ProductSpiderSpider(scrapy.Spider):
             return
 
         offers_raw = product_ld.get("offers", {})
-        # Normalise: single offer dict, list of offers, or AggregateOffer with nested offers
         if isinstance(offers_raw, list):
             offers = offers_raw
         elif isinstance(offers_raw, dict):
@@ -101,12 +120,10 @@ class ProductSpiderSpider(scrapy.Spider):
             avail_raw = offer.get("availability", "")
             availability = "InStock" if "InStock" in avail_raw else "OutOfStock"
             delivery = self._extract_delivery(offer)
-
             yield {
                 "supplier": self.supplier_name,
                 "source_url": response.url,
                 "scraped_at": datetime.utcnow().isoformat(),
-
                 "product": {
                     "name": product_ld.get("name"),
                     "description": product_ld.get("description", "").strip(),
