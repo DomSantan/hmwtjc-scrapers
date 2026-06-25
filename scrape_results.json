@@ -1,18 +1,18 @@
 {
   "run_date": "2026-06-25",
-  "started_at": "2026-06-25T09:19:11.787836+00:00",
-  "finished_at": "2026-06-25T09:22:36.311882+00:00",
-  "duration_minutes": 3.4,
-  "total_scrapers": 19,
+  "started_at": "2026-06-25T10:49:33.951719+00:00",
+  "finished_at": "2026-06-25T12:19:45.507050+00:00",
+  "duration_minutes": 90.2,
+  "total_scrapers": 20,
   "ran": 1,
-  "succeeded": 1,
-  "failed": 0,
+  "succeeded": 0,
+  "failed": 1,
   "skipped_no_proxy": 0,
   "results": {
-    "DrainageOnline": {
-      "status": "success",
-      "records": 1368,
-      "duration_seconds": 191
+    "BoilerSparesUK": {
+      "status": "failed",
+      "records": 17709,
+      "duration_seconds": 5408
     }
   }
 }
