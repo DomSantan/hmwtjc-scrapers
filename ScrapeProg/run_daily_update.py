@@ -48,14 +48,14 @@ SITEMAP_TIMEOUT = 1800   # 30 min — sitemaps are always quick
 PRODUCT_TIMEOUTS = {
     "BandQ":            14400,  # 4 h  — 160k URLs across 8 proxy workers
     "Geberit":          10800,  # 3 h  — large catalogue, slow product pages
-    "BES":               9000,  # 2.5 h — 15k URLs, autothrottle can slow to ~2 req/s
     "Screwfix":          7200,  # 2 h  — large catalogue
     "Toolstation":       7200,  # 2 h
-    "VictorianPlumbing": 7200,
-    "CityPlumbing":      7200,
+    "VictorianPlumbing": None,  # no hard limit — circuit breaker + stall killer handle exit
+    "CityPlumbing":      None,  # no hard limit — 76k+ URLs, runs to completion
     "PipeKit":          10800,  # 3 h — rate-limited (DOWNLOAD_DELAY=1, CONCURRENT_REQUESTS=4)
-    "Wickes":           10800,  # 3 h — rate-limited; 90m only reached ~24% of 37k URLs
-    "BoilerSparesUK":  10800,  # 3 h — 30k URLs, autothrottle; server-limited
+    "BES":               None,  # no hard limit — large catalogue, autothrottle-limited
+    "Wickes":            None,  # no hard limit — rate-limited, 37k URLs
+    "BoilerSparesUK":    None,  # no hard limit — 30k URLs, server-limited
 }
 DEFAULT_PRODUCT_TIMEOUT = 5400  # 1.5 h for everything else
 
