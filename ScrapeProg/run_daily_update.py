@@ -379,6 +379,19 @@ def run_scraper(label, project_folder, sitemap_spider, url_csv, product_spider,
     product_timeout = PRODUCT_TIMEOUTS.get(label, DEFAULT_PRODUCT_TIMEOUT)
     start = time.time()
 
+    # PlumbNation: solve CF challenge first, save cookie for both spiders
+    if label == "PlumbNation":
+        log.info(f"[{label}] Running CF cookie extraction via Playwright…")
+        cookie_script = project_dir / "get_cf_cookie.py"
+        ok_cf, t_cf = run_cmd(
+            [str(VENV_PYTHON), str(cookie_script)],
+            cwd=project_dir, env=base_env, label=f"{label}:cf_cookie", timeout=60,
+        )
+        if ok_cf:
+            log.info(f"[{label}] CF cookie obtained in {t_cf:.0f}s")
+        else:
+            log.warning(f"[{label}] CF cookie extraction failed — scrape may be blocked")
+
     if sitemap_spider is not None:
         log.info(f"[{label}] Starting sitemap step ({sitemap_spider})")
         if url_csv_path.exists():
