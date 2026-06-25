@@ -54,7 +54,6 @@ PRODUCT_TIMEOUTS = {
     "VictorianPlumbing": 7200,
     "CityPlumbing":      7200,
     "PipeKit":          10800,  # 3 h — rate-limited (DOWNLOAD_DELAY=1, CONCURRENT_REQUESTS=4)
-    "Wickes":          10800,  # 3 h — rate-limited; 90m only reached ~24% of 37k URLs
 }
 DEFAULT_PRODUCT_TIMEOUT = 5400  # 1.5 h for everything else
 
@@ -74,6 +73,7 @@ SCRAPERS = [
     ("Wavin",             "Wavin",             "sitemap_spider_wavin",              "url.csv",  "product_spider_wavin",              "wavin.json",              False),
     ("CityPlumbing",      "CityPlumbing",      "sitemap_spider_cityplumbing",       "url.csv",  "product_spider_cityplumbing",       "cityplumbing.json",       False),
     ("DrainageCentral",   "DrainageCentral",   "sitemap_spider_drainagecentral",    "url.csv",  "product_spider_drainagecentral",    "drainagecentral.json",    False),
+    ("BoilerSparesUK",    "BoilerSparesUK",    "sitemap_spider_boilersparesuk",     "urls.csv", "product_spider_boilersparesuk",     "boilersparesuk.json",     False),
     ("DrainageFittings",  "DrainageFittings",  "sitemap_spider_drainagefittings",   "url.csv",  "product_spider_drainagefittings",       "drainagefittings.json",   False),
     ("DrainageOnline",    "DrainageOnline",    "sitemap_spider_drainageonline",     "urls.csv", "product_spider_drainageonline",     "drainageonline.json",     False),
     ("DrainageSuperstore","DrainageSuperstore","sitemap_spider_drainagesuperstore", "urls.csv", "product_spider_drainagesuperstore", "drainagesuperstore.json", False),
