@@ -32,27 +32,15 @@ class ProductSpiderSpider(scrapy.Spider):
         cookie = _cf_cookie_header()
         extra_headers = {"Cookie": cookie, "User-Agent": USER_AGENT} if cookie else {"User-Agent": USER_AGENT}
 
-        proxy_user = os.environ.get("proxy_username", "")
-        proxy_pass = os.environ.get("proxy_password", "")
-        proxy = (
-            f"http://{proxy_user}:{proxy_pass}@city.smartproxy.com:21251"
-            if proxy_user and proxy_pass else None
-        )
-        if proxy:
-            self.logger.warning(f"Using residential proxy for CF bypass")
-
         with open("url.csv") as f:
             reader = csv.DictReader(f)
             for row in reader:
                 url = row["url"].strip()
                 if url:
-                    meta = {"impersonate": "chrome124"}
-                    if proxy:
-                        meta["proxy"] = proxy
                     yield scrapy.Request(
                         url=url,
                         callback=self.parse,
-                        meta=meta,
+                        meta={"impersonate": "chrome124"},
                         headers=extra_headers,
                     )
 
