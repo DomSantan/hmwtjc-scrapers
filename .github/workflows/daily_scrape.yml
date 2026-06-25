@@ -38,6 +38,9 @@ jobs:
           ScrapeProg/venv/bin/pip install --upgrade pip
           ScrapeProg/venv/bin/pip install -r ScrapeProg/requirements.txt
 
+      - name: Install Playwright Chromium
+        run: ScrapeProg/venv/bin/playwright install chromium --with-deps
+
       - name: Run scrapers
         env:
           proxy_username: ${{ secrets.SMARTPROXY_USERNAME }}
