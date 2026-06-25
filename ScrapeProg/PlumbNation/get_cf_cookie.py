@@ -1,61 +1,53 @@
 """
-Use Playwright headless Chrome to solve Cloudflare's JS challenge and extract
-the cf_clearance cookie. Saves cookies to cf_cookies.json in cwd.
+SeleniumBase UC mode: disconnects Chrome DevTools Protocol during the CF
+challenge so Cloudflare can't detect automation signals.
 
-Exit 0 = success, Exit 1 = failed to get cookie.
+Exit 0 = cf_clearance obtained, Exit 1 = failed.
 """
 import json
 import sys
 import time
 
-from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
-
-TARGET_URL  = "https://www.plumbnation.co.uk/"
 OUTPUT_FILE = "cf_cookies.json"
-USER_AGENT  = (
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-    "AppleWebKit/537.36 (KHTML, like Gecko) "
-    "Chrome/124.0.0.0 Safari/537.36"
-)
+TARGET_URL = "https://www.plumbnation.co.uk/"
 
 
 def get_cf_cookies():
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        context = browser.new_context(user_agent=USER_AGENT)
-        page = context.new_page()
+    from seleniumbase import SB
 
-        # Skip images/fonts — we only need the cookies
-        page.route(
-            "**/*.{png,jpg,jpeg,gif,webp,svg,woff,woff2,ttf,eot,ico}",
-            lambda r: r.abort(),
-        )
+    # headless2 uses Chrome's newer --headless=new flag, less detectable than
+    # classic headless. uc=True patches out the automation indicators.
+    with SB(uc=True, headless2=True, test=False) as sb:
+        # uc_open_with_reconnect: opens page, drops the CDP connection so CF
+        # can't fingerprint it during the challenge, waits reconnect_time
+        # seconds, then reconnects once the challenge should be solved.
+        sb.uc_open_with_reconnect(TARGET_URL, reconnect_time=6)
 
-        try:
-            page.goto(TARGET_URL, wait_until="domcontentloaded", timeout=30_000)
-            # CF JS challenge changes the title from "Just a moment..." when done
-            page.wait_for_function(
-                "() => document.title !== \'Just a moment...\'",
-                timeout=30_000,
-            )
-            print(f"[cf_cookie] Page title: {page.title()}", file=sys.stderr)
-        except PlaywrightTimeout:
-            print("[cf_cookie] Timed out waiting for CF challenge", file=sys.stderr)
+        # Poll until "Just a moment..." title is gone (up to 30s)
+        for _ in range(30):
+            title = sb.get_title()
+            if "just a moment" not in title.lower():
+                break
+            time.sleep(1)
 
-        all_cookies = context.cookies()
-        browser.close()
+        title = sb.get_title()
+        print(f"[cf_cookie] Page title: {title}", file=sys.stderr)
 
-    cf = {c["name"]: c["value"] for c in all_cookies
-          if c["name"] in ("cf_clearance", "__cf_bm", "__cflb")}
-    return cf
+        raw = sb.get_cookies()
+        return {c["name"]: c["value"] for c in raw
+                if c["name"] in ("cf_clearance", "__cf_bm", "__cflb")}
 
 
 if __name__ == "__main__":
-    print("[cf_cookie] Launching headless Chrome to solve CF challenge…", file=sys.stderr)
-    cookies = get_cf_cookies()
+    print("[cf_cookie] Launching SeleniumBase UC Chrome…", file=sys.stderr)
+    try:
+        cookies = get_cf_cookies()
+    except Exception as e:
+        print(f"[cf_cookie] Error: {e}", file=sys.stderr)
+        sys.exit(1)
 
     if not cookies.get("cf_clearance"):
-        print("[cf_cookie] WARNING: cf_clearance not obtained — scrape may fail", file=sys.stderr)
+        print("[cf_cookie] WARNING: cf_clearance not obtained", file=sys.stderr)
         sys.exit(1)
 
     print(f"[cf_cookie] Got cookies: {list(cookies)}", file=sys.stderr)
