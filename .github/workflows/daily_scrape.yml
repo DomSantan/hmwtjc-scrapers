@@ -39,7 +39,10 @@ jobs:
           ScrapeProg/venv/bin/pip install -r ScrapeProg/requirements.txt
 
       - name: Install Playwright Chromium
-        run: ScrapeProg/venv/bin/playwright install chromium --with-deps
+        run: |
+          # Ubuntu 24.04 renamed libasound2 → libasound2t64; install it first
+          sudo apt-get install -y libasound2t64 libgbm1 libnss3 libxcomposite1 libxdamage1 libxrandr2 libxss1 2>/dev/null || true
+          ScrapeProg/venv/bin/playwright install chromium
 
       - name: Run scrapers
         env:
