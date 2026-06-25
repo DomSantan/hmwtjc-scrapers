@@ -86,7 +86,7 @@ SCRAPERS = [
     ("PipeDreamFittings", "PipeDreamFittings", "sitemap_spider_pipedreamfittings",  "url.csv",  "product_spider_pipedream",          "pipedreamfittings.json",  False),
     ("PlasticPipeShop",   "PlasticPipeShop",   "sitemap_spider_plasticpipeshop",    "url.csv",  "product_spider_plasticpipeshop",    "plasticpipeshop.json",    False),
     ("PlumbingSuperstore","PlumbingSuperstore","sitemap_spider_plumbingsuperstore",  "url.csv",  "product_spider_plumbingsuperstore",  "plumbingsuperstore.json", False),
-    ("PlumbNation",       "PlumbNation",       "sitemap_spider_plumbnation",        "url.csv",  "product_spider_plumbnation",        "plumbnation.json",        True),
+    ("PlumbNation",       "PlumbNation",       "sitemap_spider_plumbnation",        "url.csv",  "product_spider_plumbnation",        "plumbnation.json",        False),
     ("Screwfix",          "Screwfix",          "sitemap_spider_screwfix",           "url.csv",  "product_spider_screwfix",           "screwfix.json",           False),
     ("Toolstation",       "Toolstation",       "sitemap_spider_toolstation",        "url.csv",  "product_spider_toolstation",        "toolstation.json",        False),
     ("VictorianPlumbing", "VictorianPlumbing", "sitemap_spider_victorianplumbing",  "url.csv",  "product_spider_victorianplumbing",  "victorianplumbing.json",  False),
