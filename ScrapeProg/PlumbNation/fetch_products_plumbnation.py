@@ -87,7 +87,7 @@ def _extract(url, html):
     }
 
 
-def worker(q, results, lock, cookies, done_counter):
+def worker(q, results, lock, cookies, done_counter, sample_log):
     session = cffi_requests.Session(impersonate="chrome124")
     session.cookies.update(cookies)
     while True:
@@ -97,13 +97,22 @@ def worker(q, results, lock, cookies, done_counter):
             break
         try:
             resp = session.get(url, headers=HEADERS, timeout=20, allow_redirects=True)
+            with lock:
+                if sample_log[0] < 5:
+                    snippet = resp.text[:200].replace("\n", " ").strip()
+                    print(f"[plumbnation] sample status={resp.status_code} url={url}", file=sys.stderr)
+                    print(f"[plumbnation] sample html={snippet!r}", file=sys.stderr)
+                    sample_log[0] += 1
             if resp.status_code == 200:
                 item = _extract(url, resp.text)
                 if item:
                     with lock:
                         results.append(item)
-        except Exception:
-            pass
+        except Exception as exc:
+            with lock:
+                if sample_log[0] < 5:
+                    print(f"[plumbnation] exception: {type(exc).__name__}: {exc}", file=sys.stderr)
+                    sample_log[0] += 1
         finally:
             q.task_done()
             with lock:
@@ -125,9 +134,9 @@ def main(output_file):
     q = Queue()
     for u in urls:
         q.put(u)
-    results, lock, done_counter = [], threading.Lock(), [0]
+    results, lock, done_counter, sample_log = [], threading.Lock(), [0], [0]
     threads = [
-        threading.Thread(target=worker, args=(q, results, lock, cookies, done_counter), daemon=True)
+        threading.Thread(target=worker, args=(q, results, lock, cookies, done_counter, sample_log), daemon=True)
         for _ in range(CONCURRENCY)
     ]
     for t in threads:
