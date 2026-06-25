@@ -1,8 +1,8 @@
 {
   "run_date": "2026-06-25",
-  "started_at": "2026-06-25T20:48:12.624049+00:00",
-  "finished_at": "2026-06-25T20:48:56.867293+00:00",
-  "duration_minutes": 0.7,
+  "started_at": "2026-06-25T20:58:58.513449+00:00",
+  "finished_at": "2026-06-25T21:00:30.502155+00:00",
+  "duration_minutes": 1.5,
   "total_scrapers": 20,
   "ran": 1,
   "succeeded": 0,
@@ -12,7 +12,7 @@
     "PlumbNation": {
       "status": "failed",
       "records": 0,
-      "duration_seconds": 44
+      "duration_seconds": 92
     }
   }
 }
