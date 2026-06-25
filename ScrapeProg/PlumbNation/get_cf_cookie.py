@@ -1,9 +1,10 @@
 """
 SeleniumBase UC mode CF bypass for PlumbNation.
 
-1. Hits the homepage first to establish a real CF session and get cookies.
-2. Navigates to the sitemap index, finds the products sub-sitemap.
-3. Extracts all product URLs and writes url.csv.
+1. Hits the homepage to establish a CF session.
+2. Fetches the products sitemap and writes url.csv.
+3. Navigates to the first product URL in the same session so CF can
+   issue a cf_clearance cookie (if it fires a challenge at all).
 4. Saves all session cookies for the product spider.
 
 Exit 0 = url.csv written, Exit 1 = failed.
@@ -28,8 +29,8 @@ def run():
     from seleniumbase import SB
 
     with SB(uc=True, headless2=True, test=False) as sb:
-        # Step 1: hit homepage to establish a real CF session + get cookies
-        print("[cf_cookie] Loading homepage to establish CF session…", file=sys.stderr)
+        # Step 1: homepage — establishes CF session
+        print("[cf_cookie] Loading homepage…", file=sys.stderr)
         sb.uc_open_with_reconnect(HOME_URL, reconnect_time=6)
         for _ in range(20):
             if "just a moment" not in sb.get_title().lower():
@@ -37,41 +38,46 @@ def run():
             time.sleep(1)
         print(f"[cf_cookie] Homepage title: {sb.get_title()}", file=sys.stderr)
 
-        # Grab cookies now — these are the session cookies for product pages
-        all_cookies = {c["name"]: c["value"] for c in sb.get_cookies()}
-        print(f"[cf_cookie] Got {len(all_cookies)} cookies after homepage: {list(all_cookies)}", file=sys.stderr)
-
-        # Step 2: navigate to sitemap index
-        print("[cf_cookie] Loading sitemap index…", file=sys.stderr)
+        # Step 2: sitemap index
         sb.open(SITEMAP_URL)
         time.sleep(3)
         source = sb.get_page_source()
-
         locs = _locs(source)
         sub_sitemaps = [l for l in locs if l.rstrip("/").endswith((".xml", ".xml.gz"))]
-        print(f"[cf_cookie] Found {len(sub_sitemaps)} sub-sitemaps: {sub_sitemaps}", file=sys.stderr)
 
-        # Step 3: pick the products sub-sitemap
-        product_sitemaps = [l for l in sub_sitemaps if "product" in l.lower()]
-        if not product_sitemaps:
-            # Fall back to all sub-sitemaps if none tagged as products
-            print("[cf_cookie] No product sub-sitemap found — using all", file=sys.stderr)
-            product_sitemaps = sub_sitemaps
-
+        # Step 3: products sub-sitemap → url.csv
+        product_sitemaps = [l for l in sub_sitemaps if "product" in l.lower()] or sub_sitemaps
         page_urls = []
         for sub_url in product_sitemaps:
             print(f"[cf_cookie] Loading {sub_url}…", file=sys.stderr)
             sb.open(sub_url)
             time.sleep(2)
-            sub_source = sb.get_page_source()
-            sub_locs = _locs(sub_source)
+            sub_locs = _locs(sb.get_page_source())
             page_locs = [l for l in sub_locs if not l.rstrip("/").endswith((".xml", ".xml.gz"))]
             print(f"[cf_cookie]   → {len(page_locs)} URLs", file=sys.stderr)
             page_urls.extend(page_locs)
 
-        # Refresh cookies after all navigation — session may have been updated
+        # Step 4: visit the first product page in the same session.
+        # CF may issue cf_clearance here; the same cookie then covers all
+        # product pages when passed to scrapy-impersonate.
+        if page_urls:
+            first_product = page_urls[0]
+            print(f"[cf_cookie] Loading first product page to obtain cf_clearance: {first_product}", file=sys.stderr)
+            sb.uc_open_with_reconnect(first_product, reconnect_time=6)
+            for _ in range(25):
+                if "just a moment" not in sb.get_title().lower():
+                    break
+                time.sleep(1)
+            print(f"[cf_cookie] Product page title: {sb.get_title()}", file=sys.stderr)
+
+        # Capture all cookies — including cf_clearance if CF issued one
         all_cookies = {c["name"]: c["value"] for c in sb.get_cookies()}
-        print(f"[cf_cookie] Final cookies ({len(all_cookies)}): {list(all_cookies)}", file=sys.stderr)
+        cf_clearance = all_cookies.get("cf_clearance", "")
+        print(f"[cf_cookie] Cookies ({len(all_cookies)}): {list(all_cookies)}", file=sys.stderr)
+        if cf_clearance:
+            print(f"[cf_cookie] cf_clearance obtained!", file=sys.stderr)
+        else:
+            print(f"[cf_cookie] No cf_clearance — scrapy will use session cookies only", file=sys.stderr)
 
         return all_cookies, page_urls
 
@@ -86,10 +92,10 @@ if __name__ == "__main__":
 
     with open(OUTPUT_COOKIES, "w") as f:
         json.dump(cookies, f)
-    print(f"[cf_cookie] Saved {len(cookies)} cookies to {OUTPUT_COOKIES}", file=sys.stderr)
+    print(f"[cf_cookie] Saved {len(cookies)} cookies", file=sys.stderr)
 
     if not urls:
-        print("[cf_cookie] No product URLs found — aborting", file=sys.stderr)
+        print("[cf_cookie] No product URLs — aborting", file=sys.stderr)
         sys.exit(1)
 
     with open(OUTPUT_URLS, "w", newline="") as f:
