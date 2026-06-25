@@ -15,7 +15,8 @@ def _cf_cookie_header():
     if os.path.exists(CF_COOKIE_FILE):
         with open(CF_COOKIE_FILE) as f:
             cookies = json.load(f)
-        return "; ".join(f"{k}={v}" for k, v in cookies.items())
+        if cookies:
+            return "; ".join(f"{k}={v}" for k, v in cookies.items())
     return None
 
 
