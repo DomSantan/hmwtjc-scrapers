@@ -379,20 +379,24 @@ def run_scraper(label, project_folder, sitemap_spider, url_csv, product_spider,
     product_timeout = PRODUCT_TIMEOUTS.get(label, DEFAULT_PRODUCT_TIMEOUT)
     start = time.time()
 
-    # PlumbNation: solve CF challenge first, save cookie for both spiders
+    # PlumbNation: use SeleniumBase UC to solve CF, fetch sitemap & write url.csv
+    skip_sitemap = False
     if label == "PlumbNation":
-        log.info(f"[{label}] Running CF cookie extraction via Playwright…")
+        log.info(f"[{label}] Running CF cookie + sitemap extraction via UC browser…")
         cookie_script = project_dir / "get_cf_cookie.py"
+        if url_csv_path.exists():
+            url_csv_path.unlink()
         ok_cf, t_cf = run_cmd(
             [str(VENV_PYTHON), str(cookie_script)],
-            cwd=project_dir, env=base_env, label=f"{label}:cf_cookie", timeout=60,
+            cwd=project_dir, env=base_env, label=f"{label}:cf_cookie", timeout=120,
         )
-        if ok_cf:
-            log.info(f"[{label}] CF cookie obtained in {t_cf:.0f}s")
+        if ok_cf and url_csv_path.exists() and url_csv_path.stat().st_size > 10:
+            log.info(f"[{label}] UC browser wrote url.csv in {t_cf:.0f}s — skipping sitemap spider")
+            skip_sitemap = True
         else:
-            log.warning(f"[{label}] CF cookie extraction failed — scrape may be blocked")
+            log.warning(f"[{label}] UC browser did not produce url.csv — falling back to sitemap spider")
 
-    if sitemap_spider is not None:
+    if sitemap_spider is not None and not skip_sitemap:
         log.info(f"[{label}] Starting sitemap step ({sitemap_spider})")
         if url_csv_path.exists():
             url_csv_path.unlink()
