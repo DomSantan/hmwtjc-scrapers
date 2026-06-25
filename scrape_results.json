@@ -1,18 +1,18 @@
 {
   "run_date": "2026-06-25",
-  "started_at": "2026-06-25T13:26:59.458013+00:00",
-  "finished_at": "2026-06-25T15:59:34.506611+00:00",
-  "duration_minutes": 152.6,
+  "started_at": "2026-06-25T19:32:08.891541+00:00",
+  "finished_at": "2026-06-25T19:32:41.728810+00:00",
+  "duration_minutes": 0.5,
   "total_scrapers": 20,
   "ran": 1,
-  "succeeded": 1,
-  "failed": 0,
+  "succeeded": 0,
+  "failed": 1,
   "skipped_no_proxy": 0,
   "results": {
-    "BoilerSparesUK": {
-      "status": "success",
-      "records": 26123,
-      "duration_seconds": 9151
+    "PlumbNation": {
+      "status": "failed",
+      "records": 0,
+      "duration_seconds": 33
     }
   }
 }
