@@ -8,4 +8,4 @@ beautifulsoup4==4.13.3
 lxml==5.3.1
 jstyleson==0.0.2
 python-dotenv==1.0.1
-playwright==1.44.0
+seleniumbase
