@@ -63,7 +63,11 @@ def run():
             print(f"[cf_cookie] Loading {sub_url}…", file=sys.stderr)
             sb.open(sub_url)
             time.sleep(2)
-            sub_locs = _locs(sb.get_page_source())
+            sub_source = sb.get_page_source()
+            # Log a sample entry so we can check for lastmod tags
+            sample_start = sub_source.find('<url')
+            print(f'[cf_cookie] Sitemap sample: {sub_source[sample_start:sample_start+300]}', file=sys.stderr)
+            sub_locs = _locs(sub_source)
             page_locs = [l for l in sub_locs if not l.rstrip("/").endswith((".xml", ".xml.gz"))]
             print(f"[cf_cookie]   → {len(page_locs)} URLs", file=sys.stderr)
             page_urls.extend(page_locs)
