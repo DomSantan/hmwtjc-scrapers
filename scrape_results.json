@@ -1,18 +1,18 @@
 {
   "run_date": "2026-06-25",
-  "started_at": "2026-06-25T21:53:47.709167+00:00",
-  "finished_at": "2026-06-25T21:53:58.759918+00:00",
-  "duration_minutes": 0.2,
+  "started_at": "2026-06-25T22:02:03.987987+00:00",
+  "finished_at": "2026-06-25T23:28:15.779533+00:00",
+  "duration_minutes": 86.2,
   "total_scrapers": 20,
   "ran": 1,
-  "succeeded": 0,
-  "failed": 1,
+  "succeeded": 1,
+  "failed": 0,
   "skipped_no_proxy": 0,
   "results": {
     "PlumbNation": {
-      "status": "failed",
-      "records": 0,
-      "duration_seconds": 11
+      "status": "success",
+      "records": 14755,
+      "duration_seconds": 5149
     }
   }
 }
