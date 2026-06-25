@@ -12,7 +12,7 @@ on:
 
 jobs:
   scrape:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, residential]
     timeout-minutes: 360   # 6-hour safety limit
     permissions:
       contents: write
@@ -20,23 +20,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Cache Scrapy venv
-        uses: actions/cache@v4
-        id: scrapy-cache
-        with:
-          path: ScrapeProg/venv
-          key: scrapy-venv-${{ hashFiles('ScrapeProg/requirements.txt') }}
-
       - name: Create Scrapy venv
-        if: steps.scrapy-cache.outputs.cache-hit != 'true'
         run: |
-          python -m venv ScrapeProg/venv
-          ScrapeProg/venv/bin/pip install --upgrade pip
-          ScrapeProg/venv/bin/pip install -r ScrapeProg/requirements.txt
+          python3 -m venv ScrapeProg/venv
+          ScrapeProg/venv/bin/pip install --upgrade pip -q
+          ScrapeProg/venv/bin/pip install -r ScrapeProg/requirements.txt -q
 
       - name: Run scrapers
         env:
@@ -46,7 +34,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p data
-          python ScrapeProg/run_daily_update.py \
+          python3 ScrapeProg/run_daily_update.py \
             --skip-import \
             --results-file data/scrape_results.json \
             ${{ inputs.only && format('--only {0}', inputs.only) || '' }}
