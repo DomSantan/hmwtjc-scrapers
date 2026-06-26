@@ -403,11 +403,13 @@ def run_scraper(label, project_folder, sitemap_spider, url_csv, product_spider,
             log.error(f"[{label}] URL CSV empty after sitemap step — skipping product step")
             return False, 0, time.time() - start
 
+        timeout_str = f"{product_timeout // 60}m" if product_timeout else "∞"
         log.info(f"[{label}] Sitemap done in {t:.0f}s — {url_count:,} URLs found, "
-                 f"product timeout {product_timeout // 60}m")
+                 f"product timeout {timeout_str}")
     else:
+        timeout_str = f"{product_timeout // 60}m" if product_timeout else "∞"
         log.info(f"[{label}] No sitemap step — running product step directly, "
-                 f"product timeout {product_timeout // 60}m")
+                 f"product timeout {timeout_str}")
         url_count = 0
 
     if output_path.exists():
