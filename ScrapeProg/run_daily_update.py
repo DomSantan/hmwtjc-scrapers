@@ -59,6 +59,18 @@ PRODUCT_TIMEOUTS = {
 }
 DEFAULT_PRODUCT_TIMEOUT = 5400  # 1.5 h for everything else
 
+# ── Checkpointing ─────────────────────────────────────────────────────────────
+# Large spiders push a snapshot of their partial JSON every hour so that a
+# crash or timeout doesn't lose everything scraped so far. The import is
+# UPSERT-based so pushing the same products again on completion is safe.
+
+CHECKPOINT_INTERVAL = 3600  # seconds between mid-run checkpoints
+
+CHECKPOINT_SUPPLIERS = {
+    "CityPlumbing", "Wickes", "Toolstation", "PlumbNation",
+    "PipeKit", "BES", "BoilerSparesUK",
+}
+
 # ── Circuit breaker ───────────────────────────────────────────────────────────
 # Close a spider after this many consecutive responses that yield no items.
 # Indicates an IP block returning blank/redirect pages. 0 = disabled.
@@ -247,13 +259,17 @@ MONITOR_INTERVAL = 300   # seconds between file-growth checks (5 min)
 MAX_STALL_CHECKS  = 3    # consecutive non-growing checks before auto-kill (15 min)
 
 
-def run_cmd(args, cwd, env=None, label="", timeout=None, monitor_path=None):
+def run_cmd(args, cwd, env=None, label="", timeout=None, monitor_path=None,
+            checkpoint_interval=None, on_checkpoint=None):
     """
     Run a subprocess with real-time stderr streaming and optional file-growth
     monitoring. If monitor_path is set:
       - Logs output file size every 5 minutes.
       - After 3 consecutive checks with no growth (15 min), kills the process
         automatically so a stalled spider doesn't block the rest of the pipeline.
+    If checkpoint_interval and on_checkpoint are set:
+      - Calls on_checkpoint() in a background thread every checkpoint_interval
+        seconds whenever the output file has grown since the last checkpoint.
     """
     start = time.time()
     try:
@@ -269,10 +285,11 @@ def run_cmd(args, cwd, env=None, label="", timeout=None, monitor_path=None):
         stderr_thread = threading.Thread(target=_stream_stderr, daemon=True)
         stderr_thread.start()
 
-        deadline     = (start + timeout) if timeout else None
-        last_check   = start
-        last_size    = -1
-        stall_checks = 0
+        deadline         = (start + timeout) if timeout else None
+        last_check       = start
+        last_checkpoint  = start
+        last_size        = -1
+        stall_checks     = 0
 
         while True:
             try:
@@ -343,6 +360,12 @@ def run_cmd(args, cwd, env=None, label="", timeout=None, monitor_path=None):
                     )
                 last_check = now
 
+            if (on_checkpoint and checkpoint_interval
+                    and last_size > 0
+                    and now - last_checkpoint >= checkpoint_interval):
+                threading.Thread(target=on_checkpoint, daemon=True).start()
+                last_checkpoint = now
+
         stderr_thread.join(timeout=5)
         elapsed = time.time() - start
         if proc.returncode != 0:
@@ -369,7 +392,7 @@ def _scrapy_env(base_env: dict, project_dir: Path) -> dict:
 
 
 def run_scraper(label, project_folder, sitemap_spider, url_csv, product_spider,
-                output_json, proxy_env=None, workers=1):
+                output_json, proxy_env=None, workers=1, run_date=""):
     """Run the full two-step pipeline for one scraper. Returns (success, record_count, elapsed)."""
     project_dir  = SCRIPT_DIR / project_folder
     url_csv_path = project_dir / url_csv if url_csv else None
@@ -378,6 +401,12 @@ def run_scraper(label, project_folder, sitemap_spider, url_csv, product_spider,
     scrapy_env   = _scrapy_env(base_env, project_dir)
     product_timeout = PRODUCT_TIMEOUTS.get(label, DEFAULT_PRODUCT_TIMEOUT)
     start = time.time()
+
+    on_checkpoint = None
+    ckpt_interval = None
+    if label in CHECKPOINT_SUPPLIERS and run_date:
+        on_checkpoint = lambda: _push_checkpoint(label, output_json, run_date)
+        ckpt_interval = CHECKPOINT_INTERVAL
 
     if sitemap_spider is not None:
         log.info(f"[{label}] Starting sitemap step ({sitemap_spider})")
@@ -428,6 +457,8 @@ def run_scraper(label, project_folder, sitemap_spider, url_csv, product_spider,
             cwd=project_dir, env=base_env, label=label,
             timeout=product_timeout,
             monitor_path=output_path,
+            checkpoint_interval=ckpt_interval,
+            on_checkpoint=on_checkpoint,
         )
         if ok:
             log.info(f"[{label}] Product step done in {t:.0f}s")
@@ -440,6 +471,8 @@ def run_scraper(label, project_folder, sitemap_spider, url_csv, product_spider,
             cwd=project_dir, env=scrapy_env, label=label,
             timeout=product_timeout,
             monitor_path=output_path,
+            checkpoint_interval=ckpt_interval,
+            on_checkpoint=on_checkpoint,
         )
         if ok:
             log.info(f"[{label}] Product step done in {t:.0f}s")
@@ -511,7 +544,8 @@ def _setup_data_branch() -> bool:
     return True
 
 
-def push_supplier_and_dispatch(label: str, output_json: str, run_date: str) -> None:
+def push_supplier_and_dispatch(label: str, output_json: str, run_date: str,
+                               source_path: Path = None) -> None:
     """Push one supplier's JSON to the data branch then dispatch a targeted import."""
     if not os.getenv("GITHUB_ACTIONS"):
         return
@@ -520,7 +554,7 @@ def push_supplier_and_dispatch(label: str, output_json: str, run_date: str) -> N
         log.warning(f"[{label}] No DISPATCH_PAT — skipping per-supplier import")
         return
 
-    output_path = DATA_DIR / output_json
+    output_path = source_path if source_path else DATA_DIR / output_json
     if not output_path.exists():
         log.warning(f"[{label}] No output file — skipping import dispatch")
         return
@@ -568,6 +602,27 @@ def push_supplier_and_dispatch(label: str, output_json: str, run_date: str) -> N
         log.error(f"[{label}] Import dispatch error: {e}")
 
 
+def _push_checkpoint(label: str, output_json: str, run_date: str) -> None:
+    """Copy the partial output, repair it, push to data branch, and dispatch a partial import."""
+    src = DATA_DIR / output_json
+    if not src.exists():
+        return
+    tmp = DATA_DIR / f"_ckpt_{output_json}"
+    try:
+        shutil.copy2(src, tmp)
+        repair_json_array(tmp)
+        n = count_json_records(tmp)
+        if n < 100:
+            log.info(f"[{label}] Checkpoint skipped — only {n} records so far")
+            return
+        log.info(f"[{label}] Checkpoint: {n:,} records scraped so far — pushing partial data")
+        push_supplier_and_dispatch(label, output_json, run_date, source_path=tmp)
+    except Exception as e:
+        log.warning(f"[{label}] Checkpoint error: {e}")
+    finally:
+        tmp.unlink(missing_ok=True)
+
+
 def run_all_scrapers(scrapers, proxy_env, concurrency, run_date):
     """
     Run all scrapers with a sliding window of `concurrency` slots.
@@ -587,6 +642,7 @@ def run_all_scrapers(scrapers, proxy_env, concurrency, run_date):
                 label, folder, sitemap, csv_name, product, output,
                 proxy_env if needs_proxy else None,
                 SCRAPER_WORKERS.get(label, 1),
+                run_date,
             ): label
             for label, folder, sitemap, csv_name, product, output, needs_proxy in scrapers
         }
