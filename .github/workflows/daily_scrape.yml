@@ -12,8 +12,10 @@ on:
 
 # ── Cloud job ──────────────────────────────────────────────────────────────────
 # Runs on GitHub-hosted runners — unaffected by Pi downtime.
-# Suppliers: BoilerSparesUK, DrainageFittings, DrainageOnline, DrainageSuperstore,
-#            Geberit, MaterialsMarket, PipeKit, PlasticPipeShop, PlumbingSuperstore, Screwfix
+# Suppliers: BoilerSparesUK, DrainageCentral, DrainageFittings, DrainageOnline,
+#            DrainageSuperstore, Geberit, MaterialsMarket, PipeKit, PipeDreamFittings,
+#            PlasticPipeShop, PlumbingSuperstore, Screwfix, Toolstation,
+#            VictorianPlumbing, Wavin
 
 jobs:
   scrape-cloud:
@@ -37,7 +39,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p data
-          CLOUD_SUPPLIERS="BoilerSparesUK,DrainageFittings,DrainageOnline,DrainageSuperstore,Geberit,MaterialsMarket,PipeKit,PlasticPipeShop,PlumbingSuperstore,Screwfix"
+          CLOUD_SUPPLIERS="BoilerSparesUK,DrainageCentral,DrainageFittings,DrainageOnline,DrainageSuperstore,Geberit,MaterialsMarket,PipeKit,PipeDreamFittings,PlasticPipeShop,PlumbingSuperstore,Screwfix,Toolstation,VictorianPlumbing,Wavin"
           ONLY="${{ inputs.only }}"
           if [ -n "$ONLY" ]; then
             FILTERED=$(python3 -c "
@@ -60,8 +62,7 @@ jobs:
 # ── Pi job ─────────────────────────────────────────────────────────────────────
 # Runs on the home Pi (residential IP). Fails gracefully if the Pi is down —
 # cloud job above always completes independently.
-# Suppliers: BES, BandQ, CityPlumbing, DrainageCentral, PipeDreamFittings,
-#            PlumbNation, Toolstation, VictorianPlumbing, Wavin, Wickes
+# Suppliers: BES, BandQ, CityPlumbing, PlumbNation, Wickes
 
   scrape-pi:
     runs-on: [self-hosted, residential]
@@ -86,7 +87,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p data
-          PI_SUPPLIERS="BES,BandQ,CityPlumbing,DrainageCentral,PipeDreamFittings,PlumbNation,Toolstation,VictorianPlumbing,Wavin,Wickes"
+          PI_SUPPLIERS="BES,BandQ,CityPlumbing,PlumbNation,Wickes"
           ONLY="${{ inputs.only }}"
           if [ -n "$ONLY" ]; then
             FILTERED=$(python3 -c "
