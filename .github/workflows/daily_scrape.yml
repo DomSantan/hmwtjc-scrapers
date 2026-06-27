@@ -10,10 +10,15 @@ on:
         required: false
         default: ''
 
+# ── Cloud job ──────────────────────────────────────────────────────────────────
+# Runs on GitHub-hosted runners — unaffected by Pi downtime.
+# Suppliers: DrainageFittings, DrainageOnline, DrainageSuperstore, Geberit,
+#            MaterialsMarket, PipeKit, PlasticPipeShop, PlumbingSuperstore, Screwfix
+
 jobs:
-  scrape:
-    runs-on: [self-hosted, residential]
-    timeout-minutes: 720   # 12-hour limit (self-hosted runner, no GitHub cap)
+  scrape-cloud:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240   # 4h — longest cloud spider is PipeKit ~90m
     permissions:
       contents: write
 
@@ -26,7 +31,55 @@ jobs:
           ScrapeProg/venv/bin/pip install --upgrade pip -q
           ScrapeProg/venv/bin/pip install -r ScrapeProg/requirements.txt -q
 
-      - name: Run scrapers
+      - name: Run cloud scrapers
+        env:
+          DISPATCH_PAT: ${{ secrets.DISPATCH_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p data
+          CLOUD_SUPPLIERS="DrainageFittings,DrainageOnline,DrainageSuperstore,Geberit,MaterialsMarket,PipeKit,PlasticPipeShop,PlumbingSuperstore,Screwfix"
+          ONLY="${{ inputs.only }}"
+          if [ -n "$ONLY" ]; then
+            FILTERED=$(python3 -c "
+          only=set('$ONLY'.split(','))
+          cloud=set('$CLOUD_SUPPLIERS'.split(','))
+          result=only & cloud
+          print(','.join(result) if result else '')
+          ")
+            if [ -z "$FILTERED" ]; then
+              echo "No cloud suppliers in --only filter — skipping"
+              exit 0
+            fi
+            CLOUD_SUPPLIERS="$FILTERED"
+          fi
+          python3 ScrapeProg/run_daily_update.py \
+            --skip-import \
+            --results-file data/scrape_results.json \
+            --only "$CLOUD_SUPPLIERS"
+
+# ── Pi job ─────────────────────────────────────────────────────────────────────
+# Runs on the home Pi (residential IP). Fails gracefully if the Pi is down —
+# cloud job above always completes independently.
+# Suppliers: BES, BandQ, BoilerSparesUK, CityPlumbing, DrainageCentral,
+#            PipeDreamFittings, PlumbNation, Toolstation, VictorianPlumbing,
+#            Wavin, Wickes
+
+  scrape-pi:
+    runs-on: [self-hosted, residential]
+    timeout-minutes: 720   # 12h — CityPlumbing + Wickes are slow
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create Scrapy venv
+        run: |
+          python3 -m venv ScrapeProg/venv
+          ScrapeProg/venv/bin/pip install --upgrade pip -q
+          ScrapeProg/venv/bin/pip install -r ScrapeProg/requirements.txt -q
+
+      - name: Run Pi scrapers
         env:
           proxy_username: ${{ secrets.SMARTPROXY_USERNAME }}
           proxy_password: ${{ secrets.SMARTPROXY_PASSWORD }}
@@ -34,27 +87,40 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p data
+          PI_SUPPLIERS="BES,BandQ,BoilerSparesUK,CityPlumbing,DrainageCentral,PipeDreamFittings,PlumbNation,Toolstation,VictorianPlumbing,Wavin,Wickes"
+          ONLY="${{ inputs.only }}"
+          if [ -n "$ONLY" ]; then
+            FILTERED=$(python3 -c "
+          only=set('$ONLY'.split(','))
+          pi=set('$PI_SUPPLIERS'.split(','))
+          result=only & pi
+          print(','.join(result) if result else '')
+          ")
+            if [ -z "$FILTERED" ]; then
+              echo "No Pi suppliers in --only filter — skipping"
+              exit 0
+            fi
+            PI_SUPPLIERS="$FILTERED"
+          fi
           python3 ScrapeProg/run_daily_update.py \
             --skip-import \
             --results-file data/scrape_results.json \
-            ${{ inputs.only && format('--only {0}', inputs.only) || '' }}
+            --only "$PI_SUPPLIERS"
 
-      - name: Push scraped data to data branch
-        id: push-data
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./data
-          publish_branch: data
-          keep_files: false
-          commit_message: "data: ${{ github.run_id }} (${{ github.run_attempt }})"
+# ── Report job ─────────────────────────────────────────────────────────────────
+# Runs after both jobs finish (or one fails). Triggers the final email report.
+# always() ensures this runs even if the Pi job fails.
 
-      - name: Trigger import workflow
-        if: steps.push-data.outcome == 'success'
+  report:
+    needs: [scrape-cloud, scrape-pi]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger email report
         run: |
           curl -s -o /dev/null -w "%{http_code}" -X POST \
             -H "Authorization: token ${{ secrets.DISPATCH_PAT }}" \
             -H "Accept: application/vnd.github.v3+json" \
             https://api.github.com/repos/DomSantan/how-much-will-that-job-cost/actions/workflows/daily_import.yml/dispatches \
             -d "{\"ref\":\"main\",\"inputs\":{\"run_date\":\"$(date -u +%Y-%m-%d)\",\"scrape_run_id\":\"${{ github.run_id }}\"}}" \
-          | grep -q "^204$" && echo "Import workflow triggered" || echo "WARNING: failed to trigger import workflow"
+          | grep -q "^204$" && echo "Email report triggered" || echo "WARNING: failed to trigger report"
