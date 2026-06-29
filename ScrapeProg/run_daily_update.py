@@ -521,22 +521,28 @@ def _setup_data_branch() -> bool:
     github_token = os.getenv("GITHUB_TOKEN", "")
     remote = f"https://x-access-token:{github_token}@github.com/{PUBLIC_REPO}.git"
 
-    # Try cloning the existing data branch first
-    result = subprocess.run(
-        ["git", "clone", "--branch", "data", "--single-branch", "--depth", "1",
-         remote, str(_DATA_BRANCH_DIR)],
-        capture_output=True,
-    )
-    if result.returncode != 0:
-        # Branch may not exist yet — create it as an orphan
-        log.info("Data branch not found — creating orphan branch")
-        _DATA_BRANCH_DIR.mkdir(parents=True, exist_ok=True)
-        for cmd in [
-            ["git", "init"],
-            ["git", "remote", "add", "origin", remote],
-            ["git", "checkout", "--orphan", "data"],
-        ]:
-            subprocess.run(cmd, cwd=_DATA_BRANCH_DIR, capture_output=True)
+    if (_DATA_BRANCH_DIR / ".git").exists():
+        # Self-hosted runners keep /tmp between runs but GITHUB_TOKEN changes
+        # each workflow run — update the remote URL so the new token is used
+        subprocess.run(["git", "remote", "set-url", "origin", remote],
+                       cwd=_DATA_BRANCH_DIR, capture_output=True)
+    else:
+        # Try cloning the existing data branch first
+        result = subprocess.run(
+            ["git", "clone", "--branch", "data", "--single-branch", "--depth", "1",
+             remote, str(_DATA_BRANCH_DIR)],
+            capture_output=True,
+        )
+        if result.returncode != 0:
+            # Branch may not exist yet — create it as an orphan
+            log.info("Data branch not found — creating orphan branch")
+            _DATA_BRANCH_DIR.mkdir(parents=True, exist_ok=True)
+            for cmd in [
+                ["git", "init"],
+                ["git", "remote", "add", "origin", remote],
+                ["git", "checkout", "--orphan", "data"],
+            ]:
+                subprocess.run(cmd, cwd=_DATA_BRANCH_DIR, capture_output=True)
 
     subprocess.run(["git", "config", "user.email", "actions@github.com"], cwd=_DATA_BRANCH_DIR)
     subprocess.run(["git", "config", "user.name", "GitHub Actions"], cwd=_DATA_BRANCH_DIR)
