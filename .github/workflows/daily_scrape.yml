@@ -105,7 +105,9 @@ jobs:
             --skip-import \
             --results-file data/scrape_results.json \
             --only "$PI_SUPPLIERS"
-
+      - name: Shutdown Optiplex
+        if: always()
+        run: sudo shutdown -h now
 # ── Report job ─────────────────────────────────────────────────────────────────
 # Runs after both jobs finish (or one fails). Triggers the final email report.
 # always() ensures this runs even if the Pi job fails.
