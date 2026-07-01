@@ -16,6 +16,7 @@ import csv
 import json
 import logging
 import os
+import gzip
 import shutil
 import subprocess
 import sys
@@ -570,8 +571,20 @@ def push_supplier_and_dispatch(label: str, output_json: str, run_date: str,
         if not _setup_data_branch():
             return
         subprocess.run(["git", "pull", "--rebase"], cwd=_DATA_BRANCH_DIR, capture_output=True)
-        shutil.copy2(output_path, _DATA_BRANCH_DIR / output_json)
-        subprocess.run(["git", "add", output_json], cwd=_DATA_BRANCH_DIR)
+        file_size = output_path.stat().st_size
+        if file_size > 80 * 1024 * 1024:
+            dest_name = output_json + '.gz'
+            with open(output_path, 'rb') as f_in, gzip.open(_DATA_BRANCH_DIR / dest_name, 'wb') as f_out:
+                shutil.copyfileobj(f_in, f_out)
+            old = _DATA_BRANCH_DIR / output_json
+            if old.exists():
+                old.unlink()
+                subprocess.run(["git", "rm", "--cached", output_json], cwd=_DATA_BRANCH_DIR, capture_output=True)
+            log.info(f"[{label}] Compressed {file_size/1024/1024:.0f} MB → {(_DATA_BRANCH_DIR / dest_name).stat().st_size/1024/1024:.0f} MB")
+        else:
+            dest_name = output_json
+            shutil.copy2(output_path, _DATA_BRANCH_DIR / dest_name)
+        subprocess.run(["git", "add", dest_name], cwd=_DATA_BRANCH_DIR)
         commit = subprocess.run(
             ["git", "commit", "-m", f"[{run_date}] Add {label} scrape data"],
             cwd=_DATA_BRANCH_DIR, capture_output=True,
