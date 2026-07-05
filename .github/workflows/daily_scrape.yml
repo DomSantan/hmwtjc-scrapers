@@ -105,9 +105,9 @@ jobs:
             --skip-import \
             --results-file data/scrape_results.json \
             --only "$PI_SUPPLIERS"
-      - name: Shutdown Optiplex
+      - name: Shutdown and schedule next wake
         if: always()
-        run: sudo shutdown -h now
+        run: sudo rtcwake -m off --utc -t $(date -u -d 'tomorrow 01:30' +%s)
 # ── Report job ─────────────────────────────────────────────────────────────────
 # Runs after both jobs finish (or one fails). Triggers the final email report.
 # always() ensures this runs even if the Pi job fails.
