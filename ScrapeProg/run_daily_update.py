@@ -37,6 +37,7 @@ DATA_DIR     = SCRIPT_DIR.parent / "data"               # hmwtjc-scrapers/data/
 
 SCRAPER_WORKERS = {
     "BandQ": 8,
+    "Wickes": 3,
 }
 
 # ── Timeouts ──────────────────────────────────────────────────────────────────

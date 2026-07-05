@@ -8,8 +8,10 @@ class ProductSpiderSpider(scrapy.Spider):
     name = "product_spider_wickes"
     supplier_name = "Wickes"
 
+    url_file = "url.csv"
+
     def start_requests(self):
-        with open("url.csv", "r") as f:
+        with open(self.url_file, "r") as f:
             reader = csv.DictReader(f)
             for row in reader:
                 url = row['url'].strip()
