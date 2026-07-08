@@ -42,7 +42,7 @@ jobs:
           ONLY="${{ inputs.only }}"
           if [ -n "$ONLY" ]; then
             FILTERED=$(python3 -c "
-          only=set('$ONLY'.split(','))
+          only={s.strip() for s in '$ONLY'.split(',')}
           cloud=set('$CLOUD_SUPPLIERS'.split(','))
           result=only & cloud
           print(','.join(result) if result else '')
@@ -90,7 +90,7 @@ jobs:
           ONLY="${{ inputs.only }}"
           if [ -n "$ONLY" ]; then
             FILTERED=$(python3 -c "
-          only=set('$ONLY'.split(','))
+          only={s.strip() for s in '$ONLY'.split(',')}
           pi=set('$PI_SUPPLIERS'.split(','))
           result=only & pi
           print(','.join(result) if result else '')
