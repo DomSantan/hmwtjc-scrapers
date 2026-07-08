@@ -105,9 +105,8 @@ jobs:
             --skip-import \
             --results-file data/scrape_results.json \
             --only "$PI_SUPPLIERS"
-      - name: Shutdown and schedule next wake
-        if: always()
-        run: sudo rtcwake -m off --utc -t $(date -u -d 'tomorrow 01:30' +%s)
+      # Shutdown moved to daily_import.yml final report run — ensures all
+      # per-supplier imports finish before the Optiplex powers off.
 # ── Report job ─────────────────────────────────────────────────────────────────
 # Runs after both jobs finish (or one fails). Triggers the final email report.
 # always() ensures this runs even if the Pi job fails.
