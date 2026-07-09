@@ -11,7 +11,7 @@ class SitemapSpiderSpider(scrapy.Spider):
 
 
     def parse(self, response):
-        if response.status != 200:
+        if response.status not in (200, 202):
             self.logger.error(f"Failed to fetch sitemap: {response.status}")
             return
         response.selector.remove_namespaces()
