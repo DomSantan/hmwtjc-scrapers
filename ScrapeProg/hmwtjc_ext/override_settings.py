@@ -23,3 +23,6 @@ EMPTY_CIRCUIT_BREAKER_THRESHOLD = int(os.environ.get("CIRCUIT_BREAKER_THRESHOLD"
 # Suppress Scrapy's DEBUG/INFO flood (item-scraped lines, crawl traces, etc.)
 # Our custom extensions log at WARNING so they still appear.
 LOG_LEVEL = "WARNING"
+
+# Disable telnet console — multiple concurrent Scrapy processes fight over the port
+TELNETCONSOLE_ENABLED = False
