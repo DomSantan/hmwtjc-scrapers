@@ -12,9 +12,9 @@ on:
 
 # ── Cloud job ──────────────────────────────────────────────────────────────────
 # Runs on GitHub-hosted runners — unaffected by Pi downtime.
-# Suppliers: BoilerSparesUK, DrainageCentral, DrainageFittings, DrainageOnline,
-#            DrainageSuperstore, Geberit, PipeKit, PipeDreamFittings,
-#            PlasticPipeShop, PlumbingSuperstore, Screwfix, VictorianPlumbing, Wavin
+# Suppliers: BoilerSparesUK, DrainageCentral, DrainageFittings, Geberit, PipeKit,
+#            PipeDreamFittings, PlasticPipeShop, Screwfix, VictorianPlumbing, Wavin
+# Moved to Pi (rate-limit 202 from cloud IPs): DrainageOnline, DrainageSuperstore, PlumbingSuperstore
 
 jobs:
   scrape-cloud:
@@ -38,7 +38,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p data
-          CLOUD_SUPPLIERS="BoilerSparesUK,DrainageCentral,DrainageFittings,DrainageOnline,DrainageSuperstore,Geberit,PipeKit,PipeDreamFittings,PlasticPipeShop,PlumbingSuperstore,Screwfix,VictorianPlumbing,Wavin"
+          CLOUD_SUPPLIERS="BoilerSparesUK,DrainageCentral,DrainageFittings,Geberit,PipeKit,PipeDreamFittings,PlasticPipeShop,Screwfix,VictorianPlumbing,Wavin"
           ONLY="${{ inputs.only }}"
           if [ -n "$ONLY" ]; then
             FILTERED=$(python3 -c "
@@ -59,9 +59,11 @@ jobs:
             --only "$CLOUD_SUPPLIERS"
 
 # ── Pi job ─────────────────────────────────────────────────────────────────────
-# Runs on the home Pi (residential IP). Fails gracefully if the Pi is down —
+# Runs on the Optiplex (residential IP). Fails gracefully if the Optiplex is down —
 # cloud job above always completes independently.
-# Suppliers: BES, BandQ, CityPlumbing, MaterialsMarket, PlumbNation, Toolstation, Wickes
+# Suppliers: BES, BandQ, CityPlumbing, DrainageOnline, DrainageSuperstore,
+#            MaterialsMarket, PlumbNation, PlumbingSuperstore, Toolstation, Wickes
+# (DrainageOnline/DrainageSuperstore/PlumbingSuperstore moved here — cloud IPs get 202)
 
   scrape-pi:
     runs-on: [self-hosted, residential]
@@ -86,7 +88,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p data
-          PI_SUPPLIERS="BES,BandQ,CityPlumbing,MaterialsMarket,PlumbNation,Toolstation,Wickes"
+          PI_SUPPLIERS="BES,BandQ,CityPlumbing,DrainageOnline,DrainageSuperstore,MaterialsMarket,PlumbNation,PlumbingSuperstore,Toolstation,Wickes"
           ONLY="${{ inputs.only }}"
           if [ -n "$ONLY" ]; then
             FILTERED=$(python3 -c "

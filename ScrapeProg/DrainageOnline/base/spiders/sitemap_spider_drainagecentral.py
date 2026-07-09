@@ -4,10 +4,6 @@ import scrapy
 class SitemapSpiderSpider(scrapy.Spider):
     name = "sitemap_spider_drainageonline"
 
-    custom_settings = {
-        "DOWNLOAD_TIMEOUT": 90,
-    }
-
     def start_requests(self):
         yield scrapy.Request(
             url="https://www.drainageonline.co.uk/sitemap.xml",
