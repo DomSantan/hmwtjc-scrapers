@@ -76,8 +76,16 @@ CHECKPOINT_SUPPLIERS = {
 # ── Circuit breaker ───────────────────────────────────────────────────────────
 # Close a spider after this many consecutive responses that yield no items.
 # Indicates an IP block returning blank/redirect pages. 0 = disabled.
+# Per-supplier overrides for sites that mix plumbing and non-plumbing URLs —
+# a higher threshold lets the spider push through gaps of non-matching pages.
 
 CIRCUIT_BREAKER_THRESHOLD = 100
+
+CIRCUIT_BREAKER_THRESHOLDS = {
+    "DrainageSuperstore": 1000,  # brands.xml mixes drainage/roofing brands with plumbing ones
+    "PlumbingSuperstore": 500,   # similar mixed catalogue
+    "DrainageOnline":     500,   # flat sitemap includes non-product pages
+}
 
 # ── Scraper definitions ───────────────────────────────────────────────────────
 # (label, project_folder, sitemap_spider, url_csv, product_spider, output_json, needs_proxy)
@@ -379,16 +387,17 @@ def run_cmd(args, cwd, env=None, label="", timeout=None, monitor_path=None,
         return False, time.time() - start
 
 
-def _scrapy_env(base_env: dict, project_dir: Path) -> dict:
+def _scrapy_env(base_env: dict, project_dir: Path, label: str = "") -> dict:
     """Extend env so the circuit breaker extension is injected into every scrapy run."""
     existing = base_env.get("PYTHONPATH", "")
     parts = [str(SCRIPT_DIR), str(project_dir)]
     if existing:
         parts.append(existing)
+    threshold = CIRCUIT_BREAKER_THRESHOLDS.get(label, CIRCUIT_BREAKER_THRESHOLD)
     return {
         **base_env,
         "SCRAPY_SETTINGS_MODULE": "hmwtjc_ext.override_settings",
-        "CIRCUIT_BREAKER_THRESHOLD": str(CIRCUIT_BREAKER_THRESHOLD),
+        "CIRCUIT_BREAKER_THRESHOLD": str(threshold),
         "PYTHONPATH": ":".join(parts),
     }
 
@@ -400,7 +409,7 @@ def run_scraper(label, project_folder, sitemap_spider, url_csv, product_spider,
     url_csv_path = project_dir / url_csv if url_csv else None
     output_path  = DATA_DIR / output_json
     base_env     = proxy_env or os.environ.copy()
-    scrapy_env   = _scrapy_env(base_env, project_dir)
+    scrapy_env   = _scrapy_env(base_env, project_dir, label)
     product_timeout = PRODUCT_TIMEOUTS.get(label, DEFAULT_PRODUCT_TIMEOUT)
     start = time.time()
 
