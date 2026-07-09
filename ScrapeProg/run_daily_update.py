@@ -82,9 +82,8 @@ CHECKPOINT_SUPPLIERS = {
 CIRCUIT_BREAKER_THRESHOLD = 100
 
 CIRCUIT_BREAKER_THRESHOLDS = {
-    "DrainageSuperstore": 1000,  # brands.xml mixes drainage/roofing brands with plumbing ones
-    "PlumbingSuperstore": 500,   # similar mixed catalogue
-    "DrainageOnline":     500,   # flat sitemap includes non-product pages
+    "DrainageSuperstore": 0,  # mixed catalogue (drainage/roofing/tools) — empties are category mismatches, not IP blocks
+    "PlumbingSuperstore": 0,  # same — disable so all URLs are scanned
 }
 
 # ── Scraper definitions ───────────────────────────────────────────────────────
