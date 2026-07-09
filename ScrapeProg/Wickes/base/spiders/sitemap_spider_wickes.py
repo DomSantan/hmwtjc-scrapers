@@ -1,5 +1,15 @@
 import scrapy
 
+PLUMBING_KEYWORDS = [
+    "plumb", "pipe", "fitting", "radiator", "boiler", "drain", "shower",
+    "toilet", "cistern", "basin", "bath", "heating", "compression",
+    "push-fit", "solder-ring", "end-feed", "copper", "stopcock", "valve",
+    "immersion", "cylinder", "inhibitor", "thermostatic", "towel-rail",
+    "tap-connector", "tap-valve", "tap-washer", "flexi-hose", "flexi-pipe",
+    "waste", "soil", "overflow", "pump", "tank-connector", "water-tank",
+    "expansion", "isolation", "solvent-weld", "primaflow",
+]
+
 
 class SitemapSpiderSpider(scrapy.Spider):
     name = "sitemap_spider_wickes"
@@ -15,7 +25,6 @@ class SitemapSpiderSpider(scrapy.Spider):
             self.logger.error(f"Failed to fetch sitemap index: {response.status}")
             return
         response.selector.remove_namespaces()
-        # Root is a sitemap index — follow only product sub-sitemaps
         for loc in response.xpath("//sitemap/loc/text()").getall():
             if "sitemap-products" in loc:
                 yield scrapy.Request(
@@ -30,4 +39,5 @@ class SitemapSpiderSpider(scrapy.Spider):
             return
         response.selector.remove_namespaces()
         for url in response.xpath("//url/loc/text()").getall():
-            yield {"url": url}
+            if any(kw in url.lower() for kw in PLUMBING_KEYWORDS):
+                yield {"url": url}
