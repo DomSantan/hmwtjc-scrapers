@@ -11,13 +11,13 @@ class SitemapSpiderSpider(scrapy.Spider):
 
 
     def parse(self, response):
-        if response.status not in (200, 202):
-            self.logger.error(f"Failed to fetch sitemap: {response.status}")
-            return
         response.selector.remove_namespaces()
         product_sitemaps = response.xpath("//sitemap/loc/text()").getall()
+        if not product_sitemaps:
+            self.logger.error(f"No sitemap URLs found (status: {response.status})")
+            return
         for sitemap_url in product_sitemaps:
-            yield scrapy.Request(url=sitemap_url, callback=self.parse_product_sitemap,meta = {"impersonate":"chrome120"})
+            yield scrapy.Request(url=sitemap_url, callback=self.parse_product_sitemap, meta={"impersonate": "chrome120"})
 
     def parse_product_sitemap(self,response):
         response.selector.remove_namespaces()

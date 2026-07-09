@@ -15,9 +15,6 @@ class SitemapSpiderSpider(scrapy.Spider):
         )
 
     def parse(self, response):
-        if response.status not in (200, 202):
-            self.logger.error(f"Failed to fetch sitemap: {response.status}")
-            return
         response.selector.remove_namespaces()
 
         product_urls = response.xpath("//url/loc/text()").getall()
@@ -28,6 +25,9 @@ class SitemapSpiderSpider(scrapy.Spider):
 
         # Sitemap index — follow sub-sitemaps
         sub_sitemaps = response.xpath("//sitemap/loc/text()").getall()
+        if not sub_sitemaps:
+            self.logger.error(f"No URLs or sub-sitemaps found (status: {response.status})")
+            return
         self.logger.info(f"Sitemap index found — {len(sub_sitemaps)} sub-sitemaps")
         for sm_url in sub_sitemaps:
             yield scrapy.Request(
@@ -37,9 +37,9 @@ class SitemapSpiderSpider(scrapy.Spider):
             )
 
     def parse_sub_sitemap(self, response):
-        if response.status not in (200, 202):
-            self.logger.warning(f"Sub-sitemap returned {response.status}: {response.url}")
-            return
         response.selector.remove_namespaces()
-        for url in response.xpath("//url/loc/text()").getall():
+        urls = response.xpath("//url/loc/text()").getall()
+        if not urls:
+            self.logger.warning(f"Sub-sitemap empty (status: {response.status}): {response.url}")
+        for url in urls:
             yield {"url": url}
