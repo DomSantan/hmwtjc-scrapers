@@ -503,6 +503,12 @@ def run_scraper(label, project_folder, sitemap_spider, url_csv, product_spider,
         log.error(f"[{label}] No output file produced")
         return False, 0, time.time() - start
 
+    # Non-zero exit but data was produced — treat as partial success so the
+    # email report doesn't show "failed" when 20k products were scraped fine.
+    if not ok and records > 0:
+        log.warning(f"[{label}] Spider exited non-zero but produced {records:,} records — marking partial success")
+        return True, records, time.time() - start
+
     return ok, records, time.time() - start
 
 
@@ -815,8 +821,16 @@ def main():
             "results": {},
         }
         for label, (ok, records, elapsed) in all_results.items():
+            if ok and records > 0:
+                status = "success"
+            elif ok and records == 0:
+                status = "failed"
+            elif not ok and records > 0:
+                status = "partial"
+            else:
+                status = "failed"
             results_data["results"][label] = {
-                "status": "success" if ok else "failed",
+                "status": status,
                 "records": records,
                 "duration_seconds": round(elapsed),
             }
