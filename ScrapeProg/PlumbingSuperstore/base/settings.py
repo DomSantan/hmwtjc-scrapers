@@ -100,17 +100,21 @@ DOWNLOAD_HANDLERS = {
     "https": "scrapy_impersonate.ImpersonateDownloadHandler",
 }
 
-# Rate-limit to avoid triggering the site's burst rate-limiter (returns HTTP
-# 405 for every request, not just the offending ones, once tripped — confirmed
-# it kicks in around ~700 unthrottled requests and clears again once traffic
-# slows down). Same fix pattern as Wickes/DrainageFittings.
-CONCURRENT_REQUESTS = 4
-DOWNLOAD_DELAY = 0.5
+# Rate-limit to avoid the site's anti-bot defenses. Two tiers observed:
+# 1) a fast burst limiter that returns HTTP 405 for every request once
+#    tripped (~700 unthrottled requests), clears within ~2 min of quiet.
+# 2) a second, stricter tier that silently hangs connections instead of
+#    responding once ~4-5k requests land within ~10 min — found 2026-07-15
+#    when AutoThrottle (target concurrency 2) pushed the real rate up to
+#    ~7-12 req/s despite DOWNLOAD_DELAY=0.5, since AutoThrottle treats that
+#    delay as a starting point, not a floor, and speeds up on fast responses.
+# AutoThrottle removed — flat delay only, kept deliberately conservative.
+# DOWNLOAD_TIMEOUT kept short so a repeat trip fails fast instead of hanging
+# the whole crawl for 3 retries x 180s per URL.
+CONCURRENT_REQUESTS = 2
+DOWNLOAD_DELAY = 1.5
 RANDOMIZE_DOWNLOAD_DELAY = True
-AUTOTHROTTLE_ENABLED = True
-AUTOTHROTTLE_START_DELAY = 0.5
-AUTOTHROTTLE_MAX_DELAY = 10
-AUTOTHROTTLE_TARGET_CONCURRENCY = 2
+DOWNLOAD_TIMEOUT = 20
 RETRY_HTTP_CODES = [405, 429, 500, 502, 503, 504]
 
 # DOWNLOADER_MIDDLEWARES = {
