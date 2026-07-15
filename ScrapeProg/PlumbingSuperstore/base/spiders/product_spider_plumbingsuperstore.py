@@ -1,5 +1,6 @@
 import scrapy
 import csv
+import random
 import extruct
 from urllib.parse import urljoin
 from w3lib.html import get_base_url
@@ -13,14 +14,20 @@ class ProductSpiderSpider(scrapy.Spider):
     def start_requests(self):
         with open("url.csv", "r") as f:
             reader = csv.DictReader(f)
-            for row in reader:
-                url = row['url'].strip()
-                if url:
-                    yield scrapy.Request(
-                        url=url,
-                        callback=self.parse,
-                        meta={"impersonate": "chrome120"},
-                    )
+            urls = [row['url'].strip() for row in reader if row['url'].strip()]
+        # Sitemap order is alphabetical by brand. The site's rate limiter caps
+        # how far any one run gets, so a fixed order means the same early-
+        # alphabet brands get refreshed every night while the tail never does.
+        # Shuffling means a partial run covers a different random slice each
+        # time, so the whole catalogue rotates through over a week instead of
+        # the same prefix repeatedly.
+        random.shuffle(urls)
+        for url in urls:
+            yield scrapy.Request(
+                url=url,
+                callback=self.parse,
+                meta={"impersonate": "chrome120"},
+            )
 
     def _extract_delivery(self, offer):
         """Pull delivery info out of an offer's shippingDetails block."""
