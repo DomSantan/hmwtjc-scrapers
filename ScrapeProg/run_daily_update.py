@@ -58,6 +58,7 @@ PRODUCT_TIMEOUTS = {
     "BES":               None,  # no hard limit — large catalogue, autothrottle-limited
     "Wickes":            None,  # no hard limit — rate-limited, 37k URLs
     "BoilerSparesUK":    None,  # no hard limit — 30k URLs, server-limited
+    "PlumbingSuperstore": None,  # no hard limit — rate-limited 2026-07-15, 16k URLs, ~2.5h at safe throttle
 }
 DEFAULT_PRODUCT_TIMEOUT = 5400  # 1.5 h for everything else
 
