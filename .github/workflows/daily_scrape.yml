@@ -2,7 +2,12 @@ name: Daily price scrape
 
 on:
   schedule:
-    - cron: '0 2 * * *'   # 2am UTC daily
+    # 00:13 UTC (~1am BST) — deliberately not a round number. GitHub Actions
+    # scheduled workflows queued for popular exact times (like the old 2:00)
+    # get delayed under platform-wide load; confirmed via run history this was
+    # consistently firing 2.5-3.5h late (actual starts 04:39-05:31 UTC despite
+    # the declared 2am). An off-the-clock minute avoids that contention.
+    - cron: '13 0 * * *'
   workflow_dispatch:
     inputs:
       only:
