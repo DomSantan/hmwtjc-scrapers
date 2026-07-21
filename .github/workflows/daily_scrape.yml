@@ -18,8 +18,10 @@ on:
 # ── Cloud job ──────────────────────────────────────────────────────────────────
 # Runs on GitHub-hosted runners — unaffected by Pi downtime.
 # Suppliers: BoilerSparesUK, DrainageCentral, DrainageFittings, Geberit, PipeKit,
-#            PipeDreamFittings, PlasticPipeShop, Screwfix, VictorianPlumbing, Wavin
+#            PipeDreamFittings, PlasticPipeShop, Screwfix, VictorianPlumbing, Wavin,
+#            Selco, BetterBathrooms
 # Moved to Pi (rate-limit 202 from cloud IPs): DrainageOnline, DrainageSuperstore, PlumbingSuperstore
+# Selco/BetterBathrooms added 2026-07-21 (re-added scraper, small catalogues — see run_daily_update.py)
 
 jobs:
   scrape-cloud:
@@ -43,7 +45,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p data
-          CLOUD_SUPPLIERS="BoilerSparesUK,DrainageCentral,DrainageFittings,Geberit,PipeKit,PipeDreamFittings,PlasticPipeShop,Screwfix,VictorianPlumbing,Wavin"
+          CLOUD_SUPPLIERS="BoilerSparesUK,DrainageCentral,DrainageFittings,Geberit,PipeKit,PipeDreamFittings,PlasticPipeShop,Screwfix,VictorianPlumbing,Wavin,Selco,BetterBathrooms"
           ONLY="${{ inputs.only }}"
           if [ -n "$ONLY" ]; then
             FILTERED=$(python3 -c "
@@ -67,8 +69,13 @@ jobs:
 # Runs on the Optiplex (residential IP). Fails gracefully if the Optiplex is down —
 # cloud job above always completes independently.
 # Suppliers: BES, BandQ, CityPlumbing, DrainageOnline, DrainageSuperstore,
-#            MaterialsMarket, PlumbNation, PlumbingSuperstore, Toolstation, Wickes
+#            MaterialsMarket, PlumbNation, PlumbingSuperstore, Toolstation, Wickes,
+#            Wolseley, Jewson, Plumbworld, HeatAndPlumb
 # (DrainageOnline/DrainageSuperstore/PlumbingSuperstore moved here — cloud IPs get 202)
+# Wolseley/Jewson/Plumbworld/HeatAndPlumb added 2026-07-21 (re-added scraper, put
+# here rather than cloud since their catalogues are large — 14k-42k URLs each —
+# and the cloud job's 4h ceiling is already tight at 10 concurrent suppliers;
+# Pi's 12h budget already comfortably hosts the other large catalogues)
 
   scrape-pi:
     runs-on: [self-hosted, residential]
@@ -93,7 +100,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p data
-          PI_SUPPLIERS="BES,BandQ,CityPlumbing,DrainageOnline,DrainageSuperstore,MaterialsMarket,PlumbNation,PlumbingSuperstore,Toolstation,Wickes"
+          PI_SUPPLIERS="BES,BandQ,CityPlumbing,DrainageOnline,DrainageSuperstore,MaterialsMarket,PlumbNation,PlumbingSuperstore,Toolstation,Wickes,Wolseley,Jewson,Plumbworld,HeatAndPlumb"
           ONLY="${{ inputs.only }}"
           if [ -n "$ONLY" ]; then
             FILTERED=$(python3 -c "

@@ -59,6 +59,10 @@ PRODUCT_TIMEOUTS = {
     "Wickes":            None,  # no hard limit — rate-limited, 37k URLs
     "BoilerSparesUK":    None,  # no hard limit — 30k URLs, server-limited
     "PlumbingSuperstore": None,  # no hard limit — rate-limited 2026-07-15, 16k URLs, ~2.5h at safe throttle
+    "HeatAndPlumb":      None,  # no hard limit — 41.5k URLs, largest of the 2026-07-21 re-added scrapers
+    "Wolseley":         14400,  # 4 h — 26.5k URLs
+    "Jewson":           10800,  # 3 h — 15.7k URLs
+    "Plumbworld":       10800,  # 3 h — 13.9k URLs
 }
 DEFAULT_PRODUCT_TIMEOUT = 5400  # 1.5 h for everything else
 
@@ -113,6 +117,18 @@ SCRAPERS = [
     ("Toolstation",       "Toolstation",       "sitemap_spider_toolstation",        "url.csv",  "product_spider_toolstation",        "toolstation.json",        False),
     ("VictorianPlumbing", "VictorianPlumbing", "sitemap_spider_victorianplumbing",  "url.csv",  "product_spider_victorianplumbing",  "victorianplumbing.json",  False),
     ("Wickes",            "Wickes",            "sitemap_spider_wickes",             "url.csv",  "product_spider_wickes",             "wickes.json",             False),
+    # Re-added 2026-07-21 — these 6 spiders existed on disk but were never
+    # included here after the migration to this public repo (2026-06-23),
+    # so they silently stopped running entirely (not blocked/erroring — just
+    # never invoked). Data was 35-38 days stale in production before this was
+    # noticed. All 6 tested working (real sitemap + product scrape) before
+    # being re-added.
+    ("Wolseley",          "Wolseley",          "sitemap_spider_wolseley",           "url.csv",  "product_spider_wolseley",           "wolseley.json",           False),
+    ("Jewson",            "Jewson",            "sitemap_spider_jewson",             "url.csv",  "product_spider_jewson",             "jewson.json",             False),
+    ("Selco",             "Selco",             "sitemap_spider_selco",              "url.csv",  "product_spider_selco",              "selco.json",              False),
+    ("Plumbworld",        "Plumbworld",        "sitemap_spider_plumbworld",         "url.csv",  "product_spider_plumbworld",         "plumbworld.json",         False),
+    ("HeatAndPlumb",      "HeatAndPlumb",      "sitemap_spider_heatandplumb",       "url.csv",  "product_spider_heatandplumb",       "heatandplumb.json",       False),
+    ("BetterBathrooms",   "BetterBathrooms",   "sitemap_spider_betterbathrooms",    "url.csv",  "product_spider_betterbathrooms",    "betterbathrooms.json",    False),
 ]
 
 # ── Logging ───────────────────────────────────────────────────────────────────
