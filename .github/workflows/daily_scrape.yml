@@ -117,10 +117,19 @@ jobs:
           fi
           python3 ScrapeProg/run_daily_update.py \
             --skip-import \
+            --concurrency 7 \
             --results-file data/scrape_results.json \
             --only "$PI_SUPPLIERS"
       # Shutdown moved to daily_import.yml final report run — ensures all
       # per-supplier imports finish before the Optiplex powers off.
+      # --concurrency 7 (was default 10) added 2026-07-22: going from 10 to 14
+      # Pi suppliers kept the pool at 10 concurrent slots but caused more
+      # frequent slot turnover, which pushed simultaneous outbound connection
+      # attempts past the residential line's comfortable limit — 3 previously
+      # rock-solid suppliers (DrainageOnline, PlumbNation, MaterialsMarket)
+      # started failing with plain connection timeouts (not site blocks) the
+      # same night 4 suppliers were added. Lower concurrency trades a bit of
+      # wall-clock time for headroom — fine given the 12h job budget.
 # ── Report job ─────────────────────────────────────────────────────────────────
 # Runs after both jobs finish (or one fails). Triggers the final email report.
 # always() ensures this runs even if the Pi job fails.
