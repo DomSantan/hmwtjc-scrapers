@@ -54,7 +54,10 @@ PRODUCT_TIMEOUTS = {
     "Toolstation":       7200,  # 2 h
     "VictorianPlumbing": None,  # no hard limit — circuit breaker + stall killer handle exit
     "CityPlumbing":      None,  # no hard limit — 76k+ URLs, runs to completion
-    "PipeKit":          10800,  # 3 h — rate-limited (DOWNLOAD_DELAY=1, CONCURRENT_REQUESTS=4)
+    # no hard limit — confirmed 2026-07-23 a real (non-blocked) run still needed 181m and
+    # got killed by the old 3h cap before finishing the full ~4.2k-URL catalogue (produced
+    # 23,382 records regardless, checkpointed hourly)
+    "PipeKit":           None,
     "BES":               None,  # no hard limit — large catalogue, autothrottle-limited
     "Wickes":            None,  # no hard limit — rate-limited, 37k URLs
     "BoilerSparesUK":    None,  # no hard limit — 30k URLs, server-limited
