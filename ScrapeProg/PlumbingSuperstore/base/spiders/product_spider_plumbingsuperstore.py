@@ -26,7 +26,7 @@ class ProductSpiderSpider(scrapy.Spider):
             yield scrapy.Request(
                 url=url,
                 callback=self.parse,
-                meta={"impersonate": "chrome120"},
+                meta={"impersonate": "chrome133a"},
             )
 
     def _extract_delivery(self, offer):

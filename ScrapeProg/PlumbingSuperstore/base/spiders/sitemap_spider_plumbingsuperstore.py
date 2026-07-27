@@ -6,7 +6,7 @@ class SitemapSpiderSpider(scrapy.Spider):
 
     def start_requests(self):
         yield scrapy.Request(url = "https://www.plumbingsuperstore.co.uk/sitemap/brands.xml",
-                             meta = {"impersonate":"chrome120"},
+                             meta = {"impersonate":"chrome133a"},
                              )
 
 
@@ -17,7 +17,7 @@ class SitemapSpiderSpider(scrapy.Spider):
             self.logger.error(f"No sitemap URLs found (status: {response.status})")
             return
         for sitemap_url in product_sitemaps:
-            yield scrapy.Request(url=sitemap_url, callback=self.parse_product_sitemap, meta={"impersonate": "chrome120"})
+            yield scrapy.Request(url=sitemap_url, callback=self.parse_product_sitemap, meta={"impersonate": "chrome133a"})
 
     def parse_product_sitemap(self,response):
         response.selector.remove_namespaces()
