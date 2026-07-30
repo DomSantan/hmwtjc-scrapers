@@ -6,7 +6,7 @@ class SitemapSpiderSpider(scrapy.Spider):
 
     def start_requests(self):
         yield scrapy.Request(url = "https://www.plasticpipeshop.co.uk/sitemap.xml",
-                             meta = {"impersonate":"chrome120"},
+                             meta = {"impersonate":"chrome133a"},
                              )
 
 
