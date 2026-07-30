@@ -63,7 +63,9 @@ PRODUCT_TIMEOUTS = {
     "BoilerSparesUK":    None,  # no hard limit — 30k URLs, server-limited
     "PlumbingSuperstore": None,  # no hard limit — rate-limited 2026-07-15, 16k URLs, ~2.5h at safe throttle
     "HeatAndPlumb":      None,  # no hard limit — 41.5k URLs, largest of the 2026-07-21 re-added scrapers
-    "Wolseley":         14400,  # 4 h — 26.5k URLs
+    "Wolseley":          None,  # no hard limit — rate-limited 2026-07-30 (was losing ~8.6k/26.4k URLs
+                                # nightly to an unthrottled 429 wall), now throttled to a safe rate which
+                                # trades speed for completeness - may need the full run to actually finish
     "Jewson":           10800,  # 3 h — 15.7k URLs
     "Plumbworld":       10800,  # 3 h — 13.9k URLs
 }
@@ -78,7 +80,7 @@ CHECKPOINT_INTERVAL = 3600  # seconds between mid-run checkpoints
 
 CHECKPOINT_SUPPLIERS = {
     "CityPlumbing", "Wickes", "Toolstation", "PlumbNation",
-    "PipeKit", "BES", "BoilerSparesUK",
+    "PipeKit", "BES", "BoilerSparesUK", "Wolseley",
 }
 
 # ── Circuit breaker ───────────────────────────────────────────────────────────

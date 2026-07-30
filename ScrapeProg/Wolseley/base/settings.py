@@ -100,3 +100,46 @@ DOWNLOAD_HANDLERS = {
     "https": "scrapy_impersonate.ImpersonateDownloadHandler",
 }
 
+# Rate-limit to avoid a sliding-window 429 limiter found 2026-07-30: the
+# product step ran fully unthrottled (default CONCURRENT_REQUESTS=16, no
+# delay) at ~55-57 items/s, then hit a wall of 429s ~2 min in and never
+# recovered for the rest of that run - "Gave up retrying" (3 attempts) on
+# ~8,600 URLs out of a 26,418-URL catalogue every single night for at least
+# 5 consecutive nights (confirmed via GitHub Actions log history), losing
+# roughly a third of the catalogue silently behind a "[Wolseley] finished"
+# success line each time. Same AutoThrottle-avoidance lesson as
+# PlumbingSuperstore (see that project's settings.py) - flat delay only,
+# since AutoThrottle treats DOWNLOAD_DELAY as a floor it speeds past on fast
+# responses, not a ceiling.
+#
+# Calibration (2026-07-30, against the real live site): a quick single-
+# threaded burst (30 sequential requests, ~3.3 req/s) and short concurrent
+# bursts (4/8/16 at once, not sustained) all came back clean with zero 429s -
+# the problem is specifically a *sustained* unthrottled crawl, not a low hard
+# ceiling. But real scrapy_impersonate throughput under load ran well below
+# the naive CONCURRENT_REQUESTS/DOWNLOAD_DELAY arithmetic (per-request
+# overhead dominates): CONCURRENT_REQUESTS=4/DELAY=1.0 only achieved ~0.84
+# items/s in a 339-request live test (zero 429s, but too slow - would net
+# *fewer* records than today within any reasonable timeout). Bumped to
+# CONCURRENT_REQUESTS=8/DELAY=0.4, verified clean again (250-request live
+# sample, zero 429s) at ~2.08 items/s - projects to ~3.5h for the full
+# 26,418-URL catalogue. PRODUCT_TIMEOUTS entry for Wolseley in
+# run_daily_update.py uncapped (was a 4h/14400s hard limit) and added to
+# CHECKPOINT_SUPPLIERS to match, since this trades raw speed for completeness
+# and may now need close to (or over) the old timeout to finish for real.
+# **Not yet verified against a real full-catalogue run on the actual Optiplex
+# environment** - check the next nightly run's Wolseley record count and
+# "Gave up retrying" count against the 2026-07-30 baseline (16,223 records /
+# ~8,598 permanently lost) - if throughput on the real runner differs
+# meaningfully from this local calibration, these numbers may need another
+# round of tuning (same iterative pattern as the PlumbingSuperstore fix).
+CONCURRENT_REQUESTS = 8
+DOWNLOAD_DELAY = 0.4
+RANDOMIZE_DOWNLOAD_DELAY = True
+DOWNLOAD_TIMEOUT = 20
+RETRY_HTTP_CODES = [429, 500, 502, 503, 504]
+# ~4 req/s -> 26,418 URLs in ~1.8h, comfortably inside the existing 240m
+# product timeout. Not yet verified against a real full-catalogue run -
+# check the next nightly run's actual Wolseley record count and "Gave up
+# retrying" count against tonight's baseline (16,223 records / ~8,598 lost).
+
