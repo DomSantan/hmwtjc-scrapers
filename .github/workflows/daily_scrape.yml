@@ -7,7 +7,21 @@ on:
     # get delayed under platform-wide load; confirmed via run history this was
     # consistently firing 2.5-3.5h late (actual starts 04:39-05:31 UTC despite
     # the declared 2am). An off-the-clock minute avoids that contention.
+    # STILL true as of 2026-08-04: every scheduled run over the past 5 nights
+    # actually started 03:32-03:49 UTC, a ~3.3h delay from the declared 00:13.
     - cron: '13 0 * * *'
+    # 11:17 UTC — second run, for PlasticPipeShop and PlumbingSuperstore only
+    # (see CLOUD_STRAGGLER / PI_STRAGGLER below). Both suppliers fail hard
+    # every night in the ~03:30-04:00 UTC window the main run's first requests
+    # land in (see above — that's the *actual* start time, not the declared
+    # 00:13), on two completely different network origins (GitHub cloud vs.
+    # the residential Optiplex), yet pass cleanly every time they're run in
+    # isolation outside that window — including a manual test at ~11:20 UTC
+    # that ran PlumbingSuperstore's full 8h crawl with zero blocks. Time-of-
+    # night-specific blocking, cause unconfirmed; this is a scheduling
+    # workaround, not a root-cause fix. 11:17 chosen to land close to that
+    # proven-safe precedent while staying off a round number.
+    - cron: '17 11 * * *'
   workflow_dispatch:
     inputs:
       only:
@@ -18,11 +32,14 @@ on:
 # ── Cloud job ──────────────────────────────────────────────────────────────────
 # Runs on GitHub-hosted runners — unaffected by Pi downtime.
 # Suppliers: BoilerSparesUK, DrainageCentral, DrainageFittings, Geberit,
-#            PipeDreamFittings, PlasticPipeShop, Screwfix, VictorianPlumbing, Wavin,
-#            Selco, BetterBathrooms
+#            PipeDreamFittings, Screwfix, VictorianPlumbing, Wavin,
+#            Selco, BetterBathrooms  (main 00:13 run)
+#            + PlasticPipeShop (11:17 straggler run only — see CLOUD_STRAGGLER)
 # Moved to Pi (rate-limit 202 from cloud IPs): DrainageOnline, DrainageSuperstore, PlumbingSuperstore
 # Selco/BetterBathrooms added 2026-07-21 (re-added scraper, small catalogues — see run_daily_update.py)
 # PipeKit moved to Pi 2026-07-23 (see below) — same cloud-IP-block pattern as the drainage trio
+# PlasticPipeShop split onto its own 11:17 UTC run 2026-08-04 — see the cron
+# comment above for why.
 
 jobs:
   scrape-cloud:
@@ -44,9 +61,23 @@ jobs:
         env:
           DISPATCH_PAT: ${{ secrets.DISPATCH_PAT }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SCHEDULE: ${{ github.event.schedule }}
         run: |
           mkdir -p data
-          CLOUD_SUPPLIERS="BoilerSparesUK,DrainageCentral,DrainageFittings,Geberit,PipeDreamFittings,PlasticPipeShop,Screwfix,VictorianPlumbing,Wavin,Selco,BetterBathrooms"
+          CLOUD_MAIN="BoilerSparesUK,DrainageCentral,DrainageFittings,Geberit,PipeDreamFittings,Screwfix,VictorianPlumbing,Wavin,Selco,BetterBathrooms"
+          CLOUD_STRAGGLER="PlasticPipeShop"
+
+          if [ "$EVENT_NAME" = "schedule" ]; then
+            if [ "$EVENT_SCHEDULE" = "17 11 * * *" ]; then
+              CLOUD_SUPPLIERS="$CLOUD_STRAGGLER"
+            else
+              CLOUD_SUPPLIERS="$CLOUD_MAIN"
+            fi
+          else
+            CLOUD_SUPPLIERS="$CLOUD_MAIN,$CLOUD_STRAGGLER"
+          fi
+
           ONLY="${{ inputs.only }}"
           if [ -n "$ONLY" ]; then
             FILTERED=$(python3 -c "
@@ -70,9 +101,14 @@ jobs:
 # Runs on the Optiplex (residential IP). Fails gracefully if the Optiplex is down —
 # cloud job above always completes independently.
 # Suppliers: BES, BandQ, CityPlumbing, DrainageOnline, DrainageSuperstore,
-#            MaterialsMarket, PlumbNation, PlumbingSuperstore, Toolstation, Wickes,
-#            Wolseley, Jewson, Plumbworld, HeatAndPlumb, PipeKit
+#            MaterialsMarket, PlumbNation, Toolstation, Wickes,
+#            Wolseley, Jewson, Plumbworld, HeatAndPlumb, PipeKit  (main 00:13 run)
+#            + PlumbingSuperstore (11:17 straggler run only — see PI_STRAGGLER)
 # (DrainageOnline/DrainageSuperstore/PlumbingSuperstore moved here — cloud IPs get 202)
+# PlumbingSuperstore split onto its own 11:17 UTC run 2026-08-04 — see the cron
+# comment up top for why. NOTE: the Optiplex's rtcwake wake window needs to
+# cover ~11:17 UTC too (plus GitHub's usual queue delay) — check/extend it,
+# this workflow change alone doesn't wake the physical machine a second time.
 # Wolseley/Jewson/Plumbworld/HeatAndPlumb added 2026-07-21 (re-added scraper, put
 # here rather than cloud since their catalogues are large — 14k-42k URLs each —
 # and the cloud job's 4h ceiling is already tight at 10 concurrent suppliers;
@@ -105,9 +141,23 @@ jobs:
           proxy_password: ${{ secrets.SMARTPROXY_PASSWORD }}
           DISPATCH_PAT: ${{ secrets.DISPATCH_PAT }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SCHEDULE: ${{ github.event.schedule }}
         run: |
           mkdir -p data
-          PI_SUPPLIERS="BES,BandQ,CityPlumbing,DrainageOnline,DrainageSuperstore,MaterialsMarket,PlumbNation,PlumbingSuperstore,Toolstation,Wickes,Wolseley,Jewson,Plumbworld,HeatAndPlumb,PipeKit"
+          PI_MAIN="BES,BandQ,CityPlumbing,DrainageOnline,DrainageSuperstore,MaterialsMarket,PlumbNation,Toolstation,Wickes,Wolseley,Jewson,Plumbworld,HeatAndPlumb,PipeKit"
+          PI_STRAGGLER="PlumbingSuperstore"
+
+          if [ "$EVENT_NAME" = "schedule" ]; then
+            if [ "$EVENT_SCHEDULE" = "17 11 * * *" ]; then
+              PI_SUPPLIERS="$PI_STRAGGLER"
+            else
+              PI_SUPPLIERS="$PI_MAIN"
+            fi
+          else
+            PI_SUPPLIERS="$PI_MAIN,$PI_STRAGGLER"
+          fi
+
           ONLY="${{ inputs.only }}"
           if [ -n "$ONLY" ]; then
             FILTERED=$(python3 -c "
