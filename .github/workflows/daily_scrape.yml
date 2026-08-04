@@ -10,17 +10,25 @@ on:
     # STILL true as of 2026-08-04: every scheduled run over the past 5 nights
     # actually started 03:32-03:49 UTC, a ~3.3h delay from the declared 00:13.
     - cron: '13 0 * * *'
-    # 11:17 UTC — second run, for PlasticPipeShop and PlumbingSuperstore only
-    # (see CLOUD_STRAGGLER / PI_STRAGGLER below). Both suppliers fail hard
-    # every night in the ~03:30-04:00 UTC window the main run's first requests
-    # land in (see above — that's the *actual* start time, not the declared
-    # 00:13), on two completely different network origins (GitHub cloud vs.
-    # the residential Optiplex), yet pass cleanly every time they're run in
+    # 11:17 UTC — second run, for PlumbingSuperstore only (see PI_STRAGGLER
+    # below). Fails hard every night in the ~03:30-04:00 UTC window the main
+    # run's first requests land in (that's the *actual* start time, not the
+    # declared 00:13 — see above), yet passes cleanly whenever it's run in
     # isolation outside that window — including a manual test at ~11:20 UTC
-    # that ran PlumbingSuperstore's full 8h crawl with zero blocks. Time-of-
-    # night-specific blocking, cause unconfirmed; this is a scheduling
-    # workaround, not a root-cause fix. 11:17 chosen to land close to that
-    # proven-safe precedent while staying off a round number.
+    # that ran its full 8h crawl with zero blocks. Time-of-night-specific
+    # blocking, cause unconfirmed; this is a scheduling workaround, not a
+    # root-cause fix. 11:17 chosen to land close to that proven-safe
+    # precedent while staying off a round number.
+    #
+    # NOTE: PlasticPipeShop was originally on this same 11:17 slot too, but
+    # 2026-08-04 same-day testing showed its failure isn't time-of-night at
+    # all — a manual run at 10:51 UTC (well outside the bad window) failed
+    # instantly the same way, while curl/curl_cffi (chrome133a AND chrome120)
+    # against the identical sitemap URL succeeded cleanly from a non-GitHub
+    # IP moments later. That's the cloud-datacenter-IP-block signature already
+    # fixed for PipeKit/DrainageOnline/DrainageSuperstore/PlumbingSuperstore —
+    # so PlasticPipeShop was moved to the Pi job's main run instead (see
+    # PI_MAIN below), not given a second cloud run.
     - cron: '17 11 * * *'
   workflow_dispatch:
     inputs:
@@ -33,13 +41,12 @@ on:
 # Runs on GitHub-hosted runners — unaffected by Pi downtime.
 # Suppliers: BoilerSparesUK, DrainageCentral, DrainageFittings, Geberit,
 #            PipeDreamFittings, Screwfix, VictorianPlumbing, Wavin,
-#            Selco, BetterBathrooms  (main 00:13 run)
-#            + PlasticPipeShop (11:17 straggler run only — see CLOUD_STRAGGLER)
-# Moved to Pi (rate-limit 202 from cloud IPs): DrainageOnline, DrainageSuperstore, PlumbingSuperstore
+#            Selco, BetterBathrooms
+# Moved to Pi (rate-limit 202/blocked from cloud IPs): DrainageOnline,
+#   DrainageSuperstore, PlumbingSuperstore, PipeKit, PlasticPipeShop
 # Selco/BetterBathrooms added 2026-07-21 (re-added scraper, small catalogues — see run_daily_update.py)
 # PipeKit moved to Pi 2026-07-23 (see below) — same cloud-IP-block pattern as the drainage trio
-# PlasticPipeShop split onto its own 11:17 UTC run 2026-08-04 — see the cron
-# comment above for why.
+# PlasticPipeShop moved to Pi 2026-08-04 — same pattern, see PI_MAIN comment below
 
 jobs:
   scrape-cloud:
@@ -65,17 +72,13 @@ jobs:
           EVENT_SCHEDULE: ${{ github.event.schedule }}
         run: |
           mkdir -p data
-          CLOUD_MAIN="BoilerSparesUK,DrainageCentral,DrainageFittings,Geberit,PipeDreamFittings,Screwfix,VictorianPlumbing,Wavin,Selco,BetterBathrooms"
-          CLOUD_STRAGGLER="PlasticPipeShop"
+          CLOUD_SUPPLIERS="BoilerSparesUK,DrainageCentral,DrainageFittings,Geberit,PipeDreamFittings,Screwfix,VictorianPlumbing,Wavin,Selco,BetterBathrooms"
 
-          if [ "$EVENT_NAME" = "schedule" ]; then
-            if [ "$EVENT_SCHEDULE" = "17 11 * * *" ]; then
-              CLOUD_SUPPLIERS="$CLOUD_STRAGGLER"
-            else
-              CLOUD_SUPPLIERS="$CLOUD_MAIN"
-            fi
-          else
-            CLOUD_SUPPLIERS="$CLOUD_MAIN,$CLOUD_STRAGGLER"
+          # 11:17 straggler run exists only for the Pi job's PlumbingSuperstore —
+          # the cloud job has nothing to do on that slot.
+          if [ "$EVENT_NAME" = "schedule" ] && [ "$EVENT_SCHEDULE" = "17 11 * * *" ]; then
+            echo "11:17 straggler run has no cloud suppliers — skipping cloud job"
+            exit 0
           fi
 
           ONLY="${{ inputs.only }}"
@@ -102,13 +105,21 @@ jobs:
 # cloud job above always completes independently.
 # Suppliers: BES, BandQ, CityPlumbing, DrainageOnline, DrainageSuperstore,
 #            MaterialsMarket, PlumbNation, Toolstation, Wickes,
-#            Wolseley, Jewson, Plumbworld, HeatAndPlumb, PipeKit  (main 00:13 run)
+#            Wolseley, Jewson, Plumbworld, HeatAndPlumb, PipeKit,
+#            PlasticPipeShop  (main 00:13 run)
 #            + PlumbingSuperstore (11:17 straggler run only — see PI_STRAGGLER)
 # (DrainageOnline/DrainageSuperstore/PlumbingSuperstore moved here — cloud IPs get 202)
 # PlumbingSuperstore split onto its own 11:17 UTC run 2026-08-04 — see the cron
 # comment up top for why. NOTE: the Optiplex's rtcwake wake window needs to
 # cover ~11:17 UTC too (plus GitHub's usual queue delay) — check/extend it,
 # this workflow change alone doesn't wake the physical machine a second time.
+# PlasticPipeShop moved here 2026-08-04 (joins the normal 00:13 run, no special
+# timing needed) — same cloud-datacenter-IP-block signature as PipeKit/the
+# drainage trio: instant block on request #1 from GitHub's cloud runner,
+# clean from every other IP tested (curl, curl_cffi chrome133a/chrome120,
+# residential) regardless of time of day. Not a timing issue like
+# PlumbingSuperstore — confirmed via a manual run at 10:51 UTC that still
+# failed instantly, well outside the suspect ~03:30-04:00 UTC window.
 # Wolseley/Jewson/Plumbworld/HeatAndPlumb added 2026-07-21 (re-added scraper, put
 # here rather than cloud since their catalogues are large — 14k-42k URLs each —
 # and the cloud job's 4h ceiling is already tight at 10 concurrent suppliers;
@@ -145,7 +156,7 @@ jobs:
           EVENT_SCHEDULE: ${{ github.event.schedule }}
         run: |
           mkdir -p data
-          PI_MAIN="BES,BandQ,CityPlumbing,DrainageOnline,DrainageSuperstore,MaterialsMarket,PlumbNation,Toolstation,Wickes,Wolseley,Jewson,Plumbworld,HeatAndPlumb,PipeKit"
+          PI_MAIN="BES,BandQ,CityPlumbing,DrainageOnline,DrainageSuperstore,MaterialsMarket,PlumbNation,Toolstation,Wickes,Wolseley,Jewson,Plumbworld,HeatAndPlumb,PipeKit,PlasticPipeShop"
           PI_STRAGGLER="PlumbingSuperstore"
 
           if [ "$EVENT_NAME" = "schedule" ]; then
