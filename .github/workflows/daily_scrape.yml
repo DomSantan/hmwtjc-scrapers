@@ -201,6 +201,26 @@ jobs:
 # ── Report job ─────────────────────────────────────────────────────────────────
 # Runs after both jobs finish (or one fails). Triggers the final email report.
 # always() ensures this runs even if the Pi job fails.
+#
+# IMPORTANT: the dispatch below runs daily_import.yml with no `supplier` input,
+# which is also what triggers that workflow's final "shut down the Optiplex +
+# schedule next rtcwake" step. Per-supplier DB imports do NOT depend on this —
+# each scraper already dispatches its own import inline as it finishes (see
+# "Per-supplier import dispatched" in run_daily_update.py's log output) — this
+# dispatch exists only for the aggregate end-of-run email + the shutdown cycle.
+#
+# 2026-08-06 INCIDENT: the 11:17 straggler run fires this same job, so it was
+# also triggering a full shutdown+reschedule. That straggler didn't actually
+# start until ~23:30 (Optiplex was asleep — the 11:17 cron alone doesn't wake
+# it, see the cron comment up top) and ran ~8h, finishing at 07:43 — right as
+# the *next* night's main 00:13 run's Pi job (queued behind it on the same
+# single self-hosted runner) had just grabbed the runner and started. The
+# straggler's shutdown fired ~2 min later and killed that main run mid-crawl —
+# all 15 Pi suppliers got zero data that night, a full residential-fleet
+# outage caused directly by the straggler schedule. Fixed by skipping this
+# dispatch entirely for the 11:17 run — its per-supplier import already
+# happened inline, so nothing is lost, and the Optiplex simply stays awake
+# until the main run's own report job does the real end-of-day shutdown.
 
   report:
     needs: [scrape-cloud, scrape-pi]
@@ -208,7 +228,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Trigger email report
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SCHEDULE: ${{ github.event.schedule }}
         run: |
+          if [ "$EVENT_NAME" = "schedule" ] && [ "$EVENT_SCHEDULE" = "17 11 * * *" ]; then
+            echo "11:17 straggler run — skipping full report/shutdown dispatch (see comment above). Per-supplier import already handled inline."
+            exit 0
+          fi
           curl -s -o /dev/null -w "%{http_code}" -X POST \
             -H "Authorization: token ${{ secrets.DISPATCH_PAT }}" \
             -H "Accept: application/vnd.github.v3+json" \
