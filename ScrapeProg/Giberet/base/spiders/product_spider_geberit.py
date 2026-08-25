@@ -27,19 +27,29 @@ class GeberitProductSpider(scrapy.Spider):
         # Two useful data sources in the RSC payload:
         #   1. schema.org ProductGroup (block with "@type":"ProductGroup") — product name + MPN list
         #   2. productArticlesData — per-article: id, eanCode, description (includes dimensions)
-
+        #
+        # As of ~2026-08, the site stopped splitting flight data across many small
+        # push() calls and now emits one huge push() per page (~200-250KB string).
+        # A regex like `\[(.*?)\]\s*\)` isn't string-escape-aware, so against a
+        # blob this size it reliably matches some `])` sequence *inside* the
+        # escaped string content instead of the real end of the call, truncating
+        # the capture and making json.loads() throw on almost every page (only
+        # short/simple payloads happened to have their first `])` be the real
+        # one, which is why ~20 pages/day were still slipping through). Using
+        # json.JSONDecoder().raw_decode() instead lets the JSON parser itself
+        # find the correct end of the array, correctly respecting escaped
+        # quotes/brackets no matter how large the payload is.
         product_name = None
         articles = []
+        decoder = json.JSONDecoder()
 
-        for block_raw in re.findall(
-            r'self\.__next_f\.push\(\[(.*?)\]\s*\)', response.text, re.DOTALL
-        ):
-            # Each block is [1, "<escaped-payload>"] — JSON decode it
+        for match in re.finditer(r'self\.__next_f\.push\(', response.text):
             try:
-                decoded = json.loads('[' + block_raw + ']')
-                payload = decoded[1] if isinstance(decoded, list) and len(decoded) > 1 else None
-            except (json.JSONDecodeError, IndexError):
+                decoded, _ = decoder.raw_decode(response.text, match.end())
+            except json.JSONDecodeError:
                 continue
+
+            payload = decoded[1] if isinstance(decoded, list) and len(decoded) > 1 else None
 
             if not payload or not isinstance(payload, str):
                 continue
