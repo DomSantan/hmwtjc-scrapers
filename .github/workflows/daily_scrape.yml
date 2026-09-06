@@ -36,6 +36,10 @@ on:
         description: 'Comma-separated scrapers to run (e.g. GrantAndStone,Wickes). Leave empty for all.'
         required: false
         default: ''
+      run_type:
+        description: "Set to \"main\" to exactly replicate the 00:13 schedule run (excludes the PlumbingSuperstore straggler — see PI_STRAGGLER below). Used by the Optiplex boot-time dispatch (2026-09-06) that bypasses GitHub's own schedule-trigger delay — see PI job comment. Leave empty for ad-hoc manual runs (includes everything, matches existing behaviour)."
+        required: false
+        default: ''
 
 # ── Cloud job ──────────────────────────────────────────────────────────────────
 # Runs on GitHub-hosted runners — unaffected by Pi downtime.
@@ -154,17 +158,36 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           EVENT_NAME: ${{ github.event_name }}
           EVENT_SCHEDULE: ${{ github.event.schedule }}
+          RUN_TYPE: ${{ inputs.run_type }}
         run: |
           mkdir -p data
           PI_MAIN="BES,BandQ,CityPlumbing,DrainageOnline,DrainageSuperstore,MaterialsMarket,PlumbNation,Toolstation,Wickes,Wolseley,Jewson,Plumbworld,HeatAndPlumb,PipeKit,PlasticPipeShop"
           PI_STRAGGLER="PlumbingSuperstore"
 
+          # 2026-09-06: GitHub's own `schedule:` dispatch delay grew from the
+          # already-known ~2.5-3.5h up to a steady ~4-4.5h (spiking to 9-10h
+          # twice), badly missing "fresh prices by morning". Root cause is
+          # platform-side (schedule-triggered runs get deprioritized under
+          # load) and out of our control. Fix: the Optiplex now dispatches
+          # this workflow itself the instant it wakes, via workflow_dispatch
+          # with run_type=main — a dispatched run starts near-instantly,
+          # unlike a scheduled one. This must produce EXACTLY the same
+          # supplier set as the 00:13 schedule (excluding the straggler,
+          # which stays on its own unrelated 11:17 schedule, untouched) or
+          # PlumbingSuperstore would get pulled back into the same ~03:30-
+          # 04:00 UTC window it was originally split out to avoid. The old
+          # `schedule:` trigger is deliberately left in place as a fallback
+          # in case the Optiplex-side dispatch ever fails to fire — if both
+          # end up running the same night, it's a harmless redundant re-scrape,
+          # not a correctness problem (per-supplier imports are idempotent).
           if [ "$EVENT_NAME" = "schedule" ]; then
             if [ "$EVENT_SCHEDULE" = "17 11 * * *" ]; then
               PI_SUPPLIERS="$PI_STRAGGLER"
             else
               PI_SUPPLIERS="$PI_MAIN"
             fi
+          elif [ "$RUN_TYPE" = "main" ]; then
+            PI_SUPPLIERS="$PI_MAIN"
           else
             PI_SUPPLIERS="$PI_MAIN,$PI_STRAGGLER"
           fi
