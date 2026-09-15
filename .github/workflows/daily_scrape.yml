@@ -1,35 +1,45 @@
 name: Daily price scrape
 
 on:
-  schedule:
-    # 00:13 UTC (~1am BST) — deliberately not a round number. GitHub Actions
-    # scheduled workflows queued for popular exact times (like the old 2:00)
-    # get delayed under platform-wide load; confirmed via run history this was
-    # consistently firing 2.5-3.5h late (actual starts 04:39-05:31 UTC despite
-    # the declared 2am). An off-the-clock minute avoids that contention.
-    # STILL true as of 2026-08-04: every scheduled run over the past 5 nights
-    # actually started 03:32-03:49 UTC, a ~3.3h delay from the declared 00:13.
-    - cron: '13 0 * * *'
-    # 11:17 UTC — second run, for PlumbingSuperstore only (see PI_STRAGGLER
-    # below). Fails hard every night in the ~03:30-04:00 UTC window the main
-    # run's first requests land in (that's the *actual* start time, not the
-    # declared 00:13 — see above), yet passes cleanly whenever it's run in
-    # isolation outside that window — including a manual test at ~11:20 UTC
-    # that ran its full 8h crawl with zero blocks. Time-of-night-specific
-    # blocking, cause unconfirmed; this is a scheduling workaround, not a
-    # root-cause fix. 11:17 chosen to land close to that proven-safe
-    # precedent while staying off a round number.
-    #
-    # NOTE: PlasticPipeShop was originally on this same 11:17 slot too, but
-    # 2026-08-04 same-day testing showed its failure isn't time-of-night at
-    # all — a manual run at 10:51 UTC (well outside the bad window) failed
-    # instantly the same way, while curl/curl_cffi (chrome133a AND chrome120)
-    # against the identical sitemap URL succeeded cleanly from a non-GitHub
-    # IP moments later. That's the cloud-datacenter-IP-block signature already
-    # fixed for PipeKit/DrainageOnline/DrainageSuperstore/PlumbingSuperstore —
-    # so PlasticPipeShop was moved to the Pi job's main run instead (see
-    # PI_MAIN below), not given a second cloud run.
-    - cron: '17 11 * * *'
+  # 2026-09-15: the `schedule:` triggers that used to live here (00:13 main,
+  # 11:17 PlumbingSuperstore straggler) are GONE, not just retimed — removing
+  # them was the fix, not a stopgap. History, for whoever finds this comment
+  # confused there's no cron left:
+  #
+  # The 00:13 cron was already known (2026-07-20, 2026-08-04) to run 2.5-4.5h
+  # late under GitHub's own scheduling contention — no cron time dodged it.
+  # 2026-09-06 fixed the SYMPTOM by having the Optiplex dispatch this workflow
+  # itself via workflow_dispatch (run_type=main) the instant it wakes —
+  # dispatched runs start near-instantly, sidestepping the schedule queue
+  # entirely. That part worked and is proven (a week of ~23:30 UTC starts).
+  #
+  # But the two OLD schedule crons were left running "as a harmless fallback"
+  # — that was wrong. Once the boot-dispatch made the main run reliable, the
+  # old crons didn't stay usefully redundant, they became a THIRD trigger
+  # competing for the same single Optiplex runner every single night: the
+  # boot-dispatch's run_type=main at ~23:30, PLUS the old 00:13 cron (still
+  # landing 4+ hours late, i.e. mid-crawl of the dispatch's own run), PLUS
+  # the old 11:17 straggler cron (also still delayed). Confirmed via
+  # `last reboot -F`: nightly uptimes were running 14-16h instead of the
+  # ~8h20m one clean crawl needs — multiple near-duplicate crawls queueing
+  # and running back-to-back on the same boot, every night. On 2026-09-13
+  # this collided badly: a delayed old-schedule run got killed mid-crawl
+  # (10h+ into Wolseley) by ANOTHER run's shutdown dispatch firing under it
+  # — the exact shutdown-collision failure class this repo already went
+  # through 4 rounds to fix (see scraper_fixes memory), just from a new
+  # source. It also flooded the private repo's import pipeline with 100+
+  # redundant dispatches/night from 3x the normal per-supplier import chatter.
+  #
+  # Fix: removed both schedule crons outright. The Optiplex's boot-dispatch
+  # (run_type=main) is now the SOLE entry point into the whole night's run,
+  # and the report job below chain-dispatches run_type=straggler once main
+  # completes — deterministic, sequential, zero collision risk, and no
+  # dependency on GitHub's schedule queue for either leg. If the boot-dispatch
+  # itself ever fails to fire, nothing scrapes that night — there's no
+  # schedule-based safety net anymore. That trade was deliberate: the old
+  # "safety net" was actively causing data loss more often than it was
+  # preventing it. Route around a failed boot-dispatch via monitoring/data-
+  # freshness checks, not by resurrecting a second competing trigger.
   workflow_dispatch:
     inputs:
       only:
@@ -37,7 +47,7 @@ on:
         required: false
         default: ''
       run_type:
-        description: "Set to \"main\" to exactly replicate the 00:13 schedule run (excludes the PlumbingSuperstore straggler — see PI_STRAGGLER below). Used by the Optiplex boot-time dispatch (2026-09-06) that bypasses GitHub's own schedule-trigger delay — see PI job comment. Leave empty for ad-hoc manual runs (includes everything, matches existing behaviour)."
+        description: "\"main\" = the full nightly batch except PlumbingSuperstore (fired by the Optiplex's boot-dispatch). \"straggler\" = PlumbingSuperstore only (chain-dispatched by main's own report job once it finishes — never fired directly except for testing). Leave empty for ad-hoc manual runs (includes everything, matches pre-2026-09-06 behaviour)."
         required: false
         default: ''
 
@@ -72,16 +82,15 @@ jobs:
         env:
           DISPATCH_PAT: ${{ secrets.DISPATCH_PAT }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          EVENT_NAME: ${{ github.event_name }}
-          EVENT_SCHEDULE: ${{ github.event.schedule }}
+          RUN_TYPE: ${{ inputs.run_type }}
         run: |
           mkdir -p data
           CLOUD_SUPPLIERS="BoilerSparesUK,DrainageCentral,DrainageFittings,Geberit,PipeDreamFittings,Screwfix,VictorianPlumbing,Wavin,Selco,BetterBathrooms"
 
-          # 11:17 straggler run exists only for the Pi job's PlumbingSuperstore —
-          # the cloud job has nothing to do on that slot.
-          if [ "$EVENT_NAME" = "schedule" ] && [ "$EVENT_SCHEDULE" = "17 11 * * *" ]; then
-            echo "11:17 straggler run has no cloud suppliers — skipping cloud job"
+          # The straggler run exists only for the Pi job's PlumbingSuperstore —
+          # the cloud job has nothing to do on that stage.
+          if [ "$RUN_TYPE" = "straggler" ]; then
+            echo "Straggler run has no cloud suppliers — skipping cloud job"
             exit 0
           fi
 
@@ -110,14 +119,15 @@ jobs:
 # Suppliers: BES, BandQ, CityPlumbing, DrainageOnline, DrainageSuperstore,
 #            MaterialsMarket, PlumbNation, Toolstation, Wickes,
 #            Wolseley, Jewson, Plumbworld, HeatAndPlumb, PipeKit,
-#            PlasticPipeShop  (main 00:13 run)
-#            + PlumbingSuperstore (11:17 straggler run only — see PI_STRAGGLER)
+#            PlasticPipeShop  (run_type=main, the nightly boot-dispatch)
+#            + PlumbingSuperstore (run_type=straggler only — see PI_STRAGGLER)
 # (DrainageOnline/DrainageSuperstore/PlumbingSuperstore moved here — cloud IPs get 202)
-# PlumbingSuperstore split onto its own 11:17 UTC run 2026-08-04 — see the cron
-# comment up top for why. NOTE: the Optiplex's rtcwake wake window needs to
-# cover ~11:17 UTC too (plus GitHub's usual queue delay) — check/extend it,
-# this workflow change alone doesn't wake the physical machine a second time.
-# PlasticPipeShop moved here 2026-08-04 (joins the normal 00:13 run, no special
+# PlumbingSuperstore split out 2026-08-04 — its crawl fails if it lands in the
+# ~03:30-04:00 UTC window a delayed main run used to land in. Originally its
+# own 11:17 schedule cron; since 2026-09-15 it's chain-dispatched by the main
+# run's own report job instead (see `on:` comment up top and the report job
+# below) — deterministic ordering, no separate schedule/wake window needed.
+# PlasticPipeShop moved here 2026-08-04 (joins the normal main run, no special
 # timing needed) — same cloud-datacenter-IP-block signature as PipeKit/the
 # drainage trio: instant block on request #1 from GitHub's cloud runner,
 # clean from every other IP tested (curl, curl_cffi chrome133a/chrome120,
@@ -156,38 +166,22 @@ jobs:
           proxy_password: ${{ secrets.SMARTPROXY_PASSWORD }}
           DISPATCH_PAT: ${{ secrets.DISPATCH_PAT }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          EVENT_NAME: ${{ github.event_name }}
-          EVENT_SCHEDULE: ${{ github.event.schedule }}
           RUN_TYPE: ${{ inputs.run_type }}
         run: |
           mkdir -p data
           PI_MAIN="BES,BandQ,CityPlumbing,DrainageOnline,DrainageSuperstore,MaterialsMarket,PlumbNation,Toolstation,Wickes,Wolseley,Jewson,Plumbworld,HeatAndPlumb,PipeKit,PlasticPipeShop"
           PI_STRAGGLER="PlumbingSuperstore"
 
-          # 2026-09-06: GitHub's own `schedule:` dispatch delay grew from the
-          # already-known ~2.5-3.5h up to a steady ~4-4.5h (spiking to 9-10h
-          # twice), badly missing "fresh prices by morning". Root cause is
-          # platform-side (schedule-triggered runs get deprioritized under
-          # load) and out of our control. Fix: the Optiplex now dispatches
-          # this workflow itself the instant it wakes, via workflow_dispatch
-          # with run_type=main — a dispatched run starts near-instantly,
-          # unlike a scheduled one. This must produce EXACTLY the same
-          # supplier set as the 00:13 schedule (excluding the straggler,
-          # which stays on its own unrelated 11:17 schedule, untouched) or
-          # PlumbingSuperstore would get pulled back into the same ~03:30-
-          # 04:00 UTC window it was originally split out to avoid. The old
-          # `schedule:` trigger is deliberately left in place as a fallback
-          # in case the Optiplex-side dispatch ever fails to fire — if both
-          # end up running the same night, it's a harmless redundant re-scrape,
-          # not a correctness problem (per-supplier imports are idempotent).
-          if [ "$EVENT_NAME" = "schedule" ]; then
-            if [ "$EVENT_SCHEDULE" = "17 11 * * *" ]; then
-              PI_SUPPLIERS="$PI_STRAGGLER"
-            else
-              PI_SUPPLIERS="$PI_MAIN"
-            fi
-          elif [ "$RUN_TYPE" = "main" ]; then
+          # run_type=main (the nightly boot-dispatch) → everything except the
+          # straggler. run_type=straggler (chain-dispatched by main's own
+          # report job once it finishes, see below) → PlumbingSuperstore only.
+          # Anything else (ad-hoc manual dispatch, run_type left empty) →
+          # everything combined, matching pre-2026-09-06 behaviour, so Dom's
+          # existing manual-testing habits via the Actions UI don't change.
+          if [ "$RUN_TYPE" = "main" ]; then
             PI_SUPPLIERS="$PI_MAIN"
+          elif [ "$RUN_TYPE" = "straggler" ]; then
+            PI_SUPPLIERS="$PI_STRAGGLER"
           else
             PI_SUPPLIERS="$PI_MAIN,$PI_STRAGGLER"
           fi
@@ -222,43 +216,62 @@ jobs:
       # same night 4 suppliers were added. Lower concurrency trades a bit of
       # wall-clock time for headroom — fine given the 12h job budget.
 # ── Report job ─────────────────────────────────────────────────────────────────
-# Runs after both jobs finish (or one fails). Triggers the final email report.
-# always() ensures this runs even if the Pi job fails.
+# Runs after both jobs finish (or one fails). always() ensures this runs even
+# if the Pi job fails.
 #
-# IMPORTANT: the dispatch below runs daily_import.yml with no `supplier` input,
-# which is also what triggers that workflow's final "shut down the Optiplex +
-# schedule next rtcwake" step. Per-supplier DB imports do NOT depend on this —
-# each scraper already dispatches its own import inline as it finishes (see
-# "Per-supplier import dispatched" in run_daily_update.py's log output) — this
-# dispatch exists only for the aggregate end-of-run email + the shutdown cycle.
+# Two responsibilities depending on RUN_TYPE:
+#   run_type=main      → chain-dispatch run_type=straggler (PlumbingSuperstore)
+#                         instead of shutting down yet. Sequential, not
+#                         parallel, so it can never compete with the straggler
+#                         for the Optiplex runner — see `on:` comment up top
+#                         for why that used to be a real problem.
+#   anything else       → the REAL final step: dispatch daily_import.yml with
+#                         no `supplier` input, which is what triggers that
+#                         workflow's "shut down the Optiplex + schedule next
+#                         rtcwake" step, plus the aggregate end-of-run email.
+#                         This covers run_type=straggler (the normal end of
+#                         the chain), and ad-hoc manual dispatches (which
+#                         were never part of the chain to begin with).
 #
-# 2026-08-06 INCIDENT: the 11:17 straggler run fires this same job, so it was
-# also triggering a full shutdown+reschedule. That straggler didn't actually
-# start until ~23:30 (Optiplex was asleep — the 11:17 cron alone doesn't wake
-# it, see the cron comment up top) and ran ~8h, finishing at 07:43 — right as
-# the *next* night's main 00:13 run's Pi job (queued behind it on the same
-# single self-hosted runner) had just grabbed the runner and started. The
-# straggler's shutdown fired ~2 min later and killed that main run mid-crawl —
-# all 15 Pi suppliers got zero data that night, a full residential-fleet
-# outage caused directly by the straggler schedule. Fixed by skipping this
-# dispatch entirely for the 11:17 run — its per-supplier import already
-# happened inline, so nothing is lost, and the Optiplex simply stays awake
-# until the main run's own report job does the real end-of-day shutdown.
+# Per-supplier DB imports do NOT depend on any of this — each scraper already
+# dispatches its own import inline as it finishes (see "Per-supplier import
+# dispatched" in run_daily_update.py's log output).
+#
+# If the chain-dispatch call itself fails (transient API error), falls
+# through to the real shutdown dispatch anyway rather than leaving the
+# Optiplex awake indefinitely with no rtcwake alarm re-armed — PlumbingSuperstore
+# just misses that one night rather than the whole cycle breaking.
+#
+# 2026-08-06 INCIDENT (historical): the old 11:17 straggler *schedule* used to
+# fire this same job, which used to ALSO trigger a full shutdown+reschedule —
+# colliding with the next night's main run grabbing the runner right after.
+# That's why this job has always special-cased "is this the straggler leg" —
+# same principle, now driven by RUN_TYPE instead of a schedule string since
+# the schedule triggers themselves are gone (see `on:` comment).
 
   report:
     needs: [scrape-cloud, scrape-pi]
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger email report
+      - name: Chain to straggler, or trigger final report + shutdown
         env:
-          EVENT_NAME: ${{ github.event_name }}
-          EVENT_SCHEDULE: ${{ github.event.schedule }}
+          RUN_TYPE: ${{ inputs.run_type }}
         run: |
-          if [ "$EVENT_NAME" = "schedule" ] && [ "$EVENT_SCHEDULE" = "17 11 * * *" ]; then
-            echo "11:17 straggler run — skipping full report/shutdown dispatch (see comment above). Per-supplier import already handled inline."
-            exit 0
+          if [ "$RUN_TYPE" = "main" ]; then
+            echo "Main run complete — chain-dispatching the straggler run (PlumbingSuperstore)."
+            HTTP=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+              -H "Authorization: token ${{ secrets.DISPATCH_PAT }}" \
+              -H "Accept: application/vnd.github.v3+json" \
+              https://api.github.com/repos/DomSantan/hmwtjc-scrapers/actions/workflows/daily_scrape.yml/dispatches \
+              -d "{\"ref\":\"main\",\"inputs\":{\"run_type\":\"straggler\"}}")
+            if [ "$HTTP" = "204" ]; then
+              echo "Straggler run dispatched — it will handle the final report + shutdown when it completes."
+              exit 0
+            fi
+            echo "WARNING: failed to dispatch straggler run (HTTP $HTTP) — falling through to shut down now instead of leaving the Optiplex awake with no rtcwake alarm re-armed. PlumbingSuperstore will just miss tonight."
           fi
+
           curl -s -o /dev/null -w "%{http_code}" -X POST \
             -H "Authorization: token ${{ secrets.DISPATCH_PAT }}" \
             -H "Accept: application/vnd.github.v3+json" \
