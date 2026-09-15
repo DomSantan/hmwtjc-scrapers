@@ -253,15 +253,24 @@ jobs:
     needs: [scrape-cloud, scrape-pi]
     if: always()
     runs-on: ubuntu-latest
+    # actions:write needed for the self-repo chain-dispatch below (GITHUB_TOKEN
+    # only gets read by default — see repo's default_workflow_permissions).
+    # DISPATCH_PAT works fine for the cross-repo call further down since that's
+    # what it was originally scoped for; it 403'd on a same-repo dispatch when
+    # first tried here (2026-09-15), which is why this step uses the ambient
+    # GITHUB_TOKEN for the self-dispatch instead of also widening DISPATCH_PAT.
+    permissions:
+      actions: write
     steps:
       - name: Chain to straggler, or trigger final report + shutdown
         env:
           RUN_TYPE: ${{ inputs.run_type }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [ "$RUN_TYPE" = "main" ]; then
             echo "Main run complete — chain-dispatching the straggler run (PlumbingSuperstore)."
             HTTP=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
-              -H "Authorization: token ${{ secrets.DISPATCH_PAT }}" \
+              -H "Authorization: token ${GH_TOKEN}" \
               -H "Accept: application/vnd.github.v3+json" \
               https://api.github.com/repos/DomSantan/hmwtjc-scrapers/actions/workflows/daily_scrape.yml/dispatches \
               -d "{\"ref\":\"main\",\"inputs\":{\"run_type\":\"straggler\"}}")
