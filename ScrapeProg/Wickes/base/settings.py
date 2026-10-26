@@ -100,13 +100,14 @@ DOWNLOAD_HANDLERS = {
     "https": "scrapy_impersonate.ImpersonateDownloadHandler",
 }
 
-CONCURRENT_REQUESTS = 4
-DOWNLOAD_DELAY = 0.5
+# Flat rate, AutoThrottle OFF: AutoThrottle treats DOWNLOAD_DELAY as a starting point and
+# speeds up on fast responses, and with 3 parallel workers that tripped Wickes' bot detection
+# ~4 min in every night (~770 of 7,224 URLs). Verified 2026-10-26: 2 concurrent / 1.0s flat,
+# single worker, chrome133a -> 1500/1500 items over 30 min, no blocks.
+CONCURRENT_REQUESTS = 2
+DOWNLOAD_DELAY = 1.0
 RANDOMIZE_DOWNLOAD_DELAY = True
-AUTOTHROTTLE_ENABLED = True
-AUTOTHROTTLE_START_DELAY = 0.5
-AUTOTHROTTLE_MAX_DELAY = 10
-AUTOTHROTTLE_TARGET_CONCURRENCY = 2
+AUTOTHROTTLE_ENABLED = False
 RETRY_HTTP_CODES = [429, 500, 502, 503, 504]
 
 # DOWNLOADER_MIDDLEWARES = {

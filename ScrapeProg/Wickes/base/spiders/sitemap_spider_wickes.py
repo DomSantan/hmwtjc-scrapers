@@ -17,7 +17,7 @@ class SitemapSpiderSpider(scrapy.Spider):
     def start_requests(self):
         yield scrapy.Request(
             url="https://www.wickes.co.uk/sitemap.xml",
-            meta={"impersonate": "chrome120"},
+            meta={"impersonate": "chrome133a"},
         )
 
     def parse(self, response):
@@ -30,7 +30,7 @@ class SitemapSpiderSpider(scrapy.Spider):
                 yield scrapy.Request(
                     url=loc,
                     callback=self.parse_product_sitemap,
-                    meta={"impersonate": "chrome120"},
+                    meta={"impersonate": "chrome133a"},
                 )
 
     def parse_product_sitemap(self, response):
