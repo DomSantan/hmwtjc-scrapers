@@ -112,7 +112,7 @@ jobs:
           fi
           python3 ScrapeProg/run_daily_update.py \
             --skip-import \
-            --results-file data/scrape_results.json \
+            --results-file data/scrape_results_cloud.json \
             --only "$CLOUD_SUPPLIERS"
 
 # ── Pi job ─────────────────────────────────────────────────────────────────────
@@ -205,7 +205,7 @@ jobs:
           python3 ScrapeProg/run_daily_update.py \
             --skip-import \
             --concurrency 7 \
-            --results-file data/scrape_results.json \
+            --results-file "data/scrape_results_pi_${RUN_TYPE:-main}.json" \
             --only "$PI_SUPPLIERS"
       # Shutdown moved to daily_import.yml final report run — ensures all
       # per-supplier imports finish before the Optiplex powers off.

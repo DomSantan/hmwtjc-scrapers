@@ -465,6 +465,7 @@ def run_scraper(label, project_folder, sitemap_spider, url_csv, product_spider,
             return False, 0, time.time() - start
 
         timeout_str = f"{product_timeout // 60}m" if product_timeout else "∞"
+        URL_COUNTS[label] = url_count
         log.info(f"[{label}] Sitemap done in {t:.0f}s — {url_count:,} URLs found, "
                  f"product timeout {timeout_str}")
     else:
@@ -542,6 +543,9 @@ def run_scraper(label, project_folder, sitemap_spider, url_csv, product_spider,
 # window rather than all waiting until every scraper has finished.
 
 _data_branch_lock = threading.Lock()
+# label -> sitemap URL count, recorded for the results file so the nightly report can
+# flag suppliers whose records/URL ratio collapses (e.g. 655 records from 47k URLs).
+URL_COUNTS: dict = {}
 _data_branch_ready = False
 _DATA_BRANCH_DIR   = Path("/tmp/hmwtjc-data-branch")
 
@@ -586,6 +590,34 @@ def _setup_data_branch() -> bool:
     subprocess.run(["git", "config", "user.name", "GitHub Actions"], cwd=_DATA_BRANCH_DIR)
     _data_branch_ready = True
     return True
+
+
+def push_results_file(path: Path, run_date: str) -> None:
+    """Push this job's results summary to the data branch for the nightly email report.
+
+    Each job (cloud / pi_main / pi_straggler) writes its own file. Before 2026-10-26 the
+    file was written locally but never pushed, so the email read a June 2026 snapshot
+    every night and showed every supplier as healthy.
+    """
+    if not os.getenv("GITHUB_ACTIONS") or not path.exists():
+        return
+    with _data_branch_lock:
+        if not _setup_data_branch():
+            return
+        subprocess.run(["git", "pull", "--rebase"], cwd=_DATA_BRANCH_DIR, capture_output=True)
+        shutil.copy2(path, _DATA_BRANCH_DIR / path.name)
+        subprocess.run(["git", "add", path.name], cwd=_DATA_BRANCH_DIR)
+        commit = subprocess.run(["git", "commit", "-m", f"[{run_date}] {path.name}"],
+                                cwd=_DATA_BRANCH_DIR, capture_output=True)
+        if commit.returncode != 0:
+            log.warning(f"Data branch: {path.name} unchanged — not pushed")
+            return
+        push = subprocess.run(["git", "push", "--set-upstream", "origin", "data"],
+                              cwd=_DATA_BRANCH_DIR, capture_output=True)
+        if push.returncode != 0:
+            log.error(f"Data branch push of {path.name} failed: {push.stderr.decode()}")
+        else:
+            log.info(f"Pushed {path.name} to data branch")
 
 
 def push_supplier_and_dispatch(label: str, output_json: str, run_date: str,
@@ -840,6 +872,7 @@ def main():
             "succeeded": len(passed),
             "failed": len(failed),
             "skipped_no_proxy": len(scrapers_skipped),
+            "job": Path(args.results_file).stem.replace("scrape_results_", "") or "all",
             "results": {},
         }
         for label, (ok, records, elapsed) in all_results.items():
@@ -854,6 +887,7 @@ def main():
             results_data["results"][label] = {
                 "status": status,
                 "records": records,
+                "urls": URL_COUNTS.get(label, 0),
                 "duration_seconds": round(elapsed),
             }
         for s in scrapers_skipped:
@@ -865,6 +899,7 @@ def main():
             }
         Path(args.results_file).write_text(json.dumps(results_data, indent=2))
         log.info(f"Results written to {args.results_file}")
+        push_results_file(Path(args.results_file), results_data["run_date"])
 
     log.info(f"Pipeline finished — {finished_at.strftime('%Y-%m-%d %H:%M:%S UTC')}")
 
