@@ -17,7 +17,7 @@ class SitemapSpiderHeatAndPlumb(scrapy.Spider):
     def start_requests(self):
         yield scrapy.Request(
             url=PRODUCT_SITEMAP,
-            meta={"impersonate": "chrome120"},
+            meta={"impersonate": "chrome133a"},
             callback=self.parse_sitemap,
         )
 
