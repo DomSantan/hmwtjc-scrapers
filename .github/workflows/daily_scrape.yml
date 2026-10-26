@@ -64,7 +64,9 @@ on:
 
 jobs:
   scrape-cloud:
-    runs-on: ubuntu-latest
+    # Pinned, not ubuntu-latest: latest moved to 26.04 (Oct 2026), whose system Python has
+    # no lxml==5.3.1 wheel, so pip tried a source build and the job died every night.
+    runs-on: ubuntu-24.04
     timeout-minutes: 240   # 4h — longest cloud spider is BoilerSparesUK (~3-4h, varies with site speed)
     permissions:
       contents: write
