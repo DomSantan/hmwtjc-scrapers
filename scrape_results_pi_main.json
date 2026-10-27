@@ -1,0 +1,104 @@
+{
+  "run_date": "2026-10-26",
+  "started_at": "2026-10-26T23:31:21.041477+00:00",
+  "finished_at": "2026-10-27T03:02:26.250859+00:00",
+  "duration_minutes": 211.1,
+  "total_scrapers": 26,
+  "ran": 15,
+  "succeeded": 14,
+  "failed": 1,
+  "skipped_no_proxy": 0,
+  "job": "pi_main",
+  "results": {
+    "BandQ": {
+      "status": "success",
+      "records": 1515,
+      "urls": 158589,
+      "duration_seconds": 120
+    },
+    "PlasticPipeShop": {
+      "status": "failed",
+      "records": 0,
+      "urls": 0,
+      "duration_seconds": 2
+    },
+    "DrainageOnline": {
+      "status": "success",
+      "records": 5396,
+      "urls": 2502,
+      "duration_seconds": 139
+    },
+    "DrainageSuperstore": {
+      "status": "success",
+      "records": 1921,
+      "urls": 6617,
+      "duration_seconds": 174
+    },
+    "MaterialsMarket": {
+      "status": "success",
+      "records": 2971,
+      "urls": 3026,
+      "duration_seconds": 241
+    },
+    "PlumbNation": {
+      "status": "success",
+      "records": 15858,
+      "urls": 15858,
+      "duration_seconds": 1281
+    },
+    "Toolstation": {
+      "status": "success",
+      "records": 150274,
+      "urls": 46853,
+      "duration_seconds": 1508
+    },
+    "Jewson": {
+      "status": "success",
+      "records": 15423,
+      "urls": 15544,
+      "duration_seconds": 1132
+    },
+    "Plumbworld": {
+      "status": "success",
+      "records": 14870,
+      "urls": 14870,
+      "duration_seconds": 899
+    },
+    "HeatAndPlumb": {
+      "status": "success",
+      "records": 10898,
+      "urls": 47743,
+      "duration_seconds": 1079
+    },
+    "PipeKit": {
+      "status": "success",
+      "records": 24139,
+      "urls": 4236,
+      "duration_seconds": 5185
+    },
+    "CityPlumbing": {
+      "status": "success",
+      "records": 86326,
+      "urls": 86638,
+      "duration_seconds": 5352
+    },
+    "Wickes": {
+      "status": "success",
+      "records": 7172,
+      "urls": 7224,
+      "duration_seconds": 8780
+    },
+    "BES": {
+      "status": "success",
+      "records": 16394,
+      "urls": 15084,
+      "duration_seconds": 9200
+    },
+    "Wolseley": {
+      "status": "success",
+      "records": 25246,
+      "urls": 26977,
+      "duration_seconds": 12417
+    }
+  }
+}
