@@ -26,5 +26,13 @@ class SitemapSpiderHeatAndPlumb(scrapy.Spider):
             self.logger.error(f"Failed to fetch sitemap: {response.status}")
             return
         response.selector.remove_namespaces()
-        for url in response.xpath("//url/loc/text()").getall():
+        urls = [u.strip() for u in response.xpath("//url/loc/text()").getall()]
+        # A ?variation= page's product is already in its parent page's ProductGroup
+        # hasVariant (checked 2026-10-27: counts matched exactly), so fetching it again
+        # yields nothing new. A 121-long run of these tripped the circuit breaker at
+        # ~10.9k items on 2026-10-26. Keep variants only when the parent isn't listed.
+        parents = {u for u in urls if "variation=" not in u}
+        for url in urls:
+            if "variation=" in url and url.split("?")[0] in parents:
+                continue
             yield {"url": url}

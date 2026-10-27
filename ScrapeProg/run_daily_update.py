@@ -60,7 +60,7 @@ PRODUCT_TIMEOUTS = {
     "PipeKit":           None,
     "BES":               None,  # no hard limit — large catalogue, autothrottle-limited
     "Wickes":            None,  # no hard limit — rate-limited, 37k URLs
-    "BoilerSparesUK":    None,  # no hard limit — 30k URLs, server-limited
+    "BoilerSparesUK":    None,  # no hard limit — ~81k URLs since the Oct 2026 rebuild, ~3.5h at ~6.5 pages/s
     "PlumbingSuperstore": None,  # no hard limit — rate-limited 2026-07-15, 16k URLs, ~2.5h at safe throttle
     "HeatAndPlumb":      None,  # no hard limit — 41.5k URLs, largest of the 2026-07-21 re-added scrapers
     "Wolseley":          None,  # no hard limit — rate-limited 2026-07-30 (was losing ~8.6k/26.4k URLs
