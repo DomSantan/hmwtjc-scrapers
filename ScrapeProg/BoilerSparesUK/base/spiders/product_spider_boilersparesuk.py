@@ -52,6 +52,13 @@ class ProductSpider(scrapy.Spider):
         else:
             price_ex = round(float(price_inc) / 1.2, 2)
 
+        # Names are generic per brand ("Vokera PIPE" covers 141 parts) and the importer
+        # keys on name, so add the part number to keep each part its own row.
+        name = data["name"].strip()
+        mpn = (data.get("mpn") or data.get("sku") or "").strip()
+        if mpn and mpn.lower() not in name.lower():
+            name = f"{name} {mpn}"
+
         brand = data.get("brand")
         if isinstance(brand, dict):
             brand = brand.get("name")
@@ -62,7 +69,7 @@ class ProductSpider(scrapy.Spider):
             "source_url": response.url,
             "scraped_at": datetime.utcnow().isoformat(),
             "product": {
-                "name": data["name"].strip(),
+                "name": name,
                 "brand": brand or "",
                 "sku": data.get("sku"),
                 "mpn": data.get("mpn"),

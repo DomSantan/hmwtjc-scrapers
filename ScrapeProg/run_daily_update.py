@@ -94,6 +94,8 @@ CIRCUIT_BREAKER_THRESHOLD = 100
 CIRCUIT_BREAKER_THRESHOLDS = {
     "DrainageSuperstore": 0,  # mixed catalogue (drainage/roofing/tools) — empties are category mismatches, not IP blocks
     "PlumbingSuperstore": 0,  # same — disable so all URLs are scanned
+    "BoilerSparesUK":   500,  # ~40% of parts are "Call for price" (no item) and they cluster in the
+                              # sitemap; a 104-long run tripped the default on 2026-10-27 at 23k items
 }
 
 # ── Scraper definitions ───────────────────────────────────────────────────────
