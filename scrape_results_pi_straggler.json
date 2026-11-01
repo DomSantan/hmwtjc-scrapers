@@ -1,8 +1,8 @@
 {
-  "run_date": "2026-10-31",
-  "started_at": "2026-10-31T03:09:59.337834+00:00",
-  "finished_at": "2026-10-31T11:33:12.600114+00:00",
-  "duration_minutes": 503.2,
+  "run_date": "2026-11-01",
+  "started_at": "2026-11-01T03:20:57.972916+00:00",
+  "finished_at": "2026-11-01T11:45:12.562363+00:00",
+  "duration_minutes": 504.2,
   "total_scrapers": 26,
   "ran": 1,
   "succeeded": 1,
@@ -14,7 +14,7 @@
       "status": "success",
       "records": 15605,
       "urls": 16348,
-      "duration_seconds": 30185
+      "duration_seconds": 30247
     }
   }
 }
