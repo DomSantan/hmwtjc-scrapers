@@ -13,8 +13,12 @@ class ProductSpiderBandQ(scrapy.Spider):
     # B&Q delivery policy (standard public rates)
     DELIVERY_POLICY = "Free delivery over £50; standard delivery £5"
 
+    # The runner passes -a url_file=<chunk> to each parallel worker; reading
+    # url.csv directly made all 8 workers fetch the same full list.
+    url_file = "url.csv"
+
     def start_requests(self):
-        with open("url.csv", "r") as f:
+        with open(self.url_file, "r") as f:
             reader = csv.DictReader(f)
             for row in reader:
                 url = row["url"].strip()

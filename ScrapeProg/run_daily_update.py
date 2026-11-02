@@ -279,11 +279,12 @@ def _run_scraper_parallel(label, project_dir, url_csv_name, product_spider,
 
     if not any(results.values()):
         log.error(f"[{label}] All parallel workers failed")
-        return False
 
+    # Merge whatever the workers wrote even if they were killed (stall/timeout),
+    # matching the single-worker path, which imports partial output.
     existing_outputs = [p for p in chunk_outputs if p.exists()]
     _merge_json_outputs(existing_outputs, output_path)
-    return True
+    return any(results.values())
 
 
 # ── Core runner ───────────────────────────────────────────────────────────────
