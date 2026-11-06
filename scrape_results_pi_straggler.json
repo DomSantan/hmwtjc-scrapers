@@ -1,8 +1,8 @@
 {
-  "run_date": "2026-11-05",
-  "started_at": "2026-11-05T03:16:20.489372+00:00",
-  "finished_at": "2026-11-05T11:40:25.513841+00:00",
-  "duration_minutes": 504.1,
+  "run_date": "2026-11-06",
+  "started_at": "2026-11-06T03:04:27.500434+00:00",
+  "finished_at": "2026-11-06T11:27:25.026208+00:00",
+  "duration_minutes": 503.0,
   "total_scrapers": 26,
   "ran": 1,
   "succeeded": 1,
@@ -13,8 +13,8 @@
     "PlumbingSuperstore": {
       "status": "success",
       "records": 15605,
-      "urls": 16348,
-      "duration_seconds": 30237
+      "urls": 16350,
+      "duration_seconds": 30169
     }
   }
 }
