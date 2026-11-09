@@ -1,8 +1,8 @@
 {
-  "run_date": "2026-11-07",
-  "started_at": "2026-11-07T23:31:16.398380+00:00",
-  "finished_at": "2026-11-08T02:17:56.900277+00:00",
-  "duration_minutes": 166.7,
+  "run_date": "2026-11-08",
+  "started_at": "2026-11-08T23:31:24.084420+00:00",
+  "finished_at": "2026-11-09T02:18:01.334886+00:00",
+  "duration_minutes": 166.6,
   "total_scrapers": 26,
   "ran": 10,
   "succeeded": 9,
@@ -18,57 +18,57 @@
     },
     "Selco": {
       "status": "success",
-      "records": 835,
+      "records": 2458,
       "urls": 758,
-      "duration_seconds": 13
+      "duration_seconds": 34
+    },
+    "BetterBathrooms": {
+      "status": "success",
+      "records": 2300,
+      "urls": 2399,
+      "duration_seconds": 95
     },
     "Geberit": {
       "status": "success",
       "records": 8627,
       "urls": 1814,
-      "duration_seconds": 142
-    },
-    "BetterBathrooms": {
-      "status": "success",
-      "records": 2313,
-      "urls": 2412,
-      "duration_seconds": 149
+      "duration_seconds": 135
     },
     "PipeDreamFittings": {
       "status": "success",
       "records": 18681,
       "urls": 3711,
-      "duration_seconds": 179
+      "duration_seconds": 168
     },
     "DrainageFittings": {
       "status": "success",
       "records": 585,
       "urls": 648,
-      "duration_seconds": 398
+      "duration_seconds": 399
     },
     "Wavin": {
       "status": "success",
-      "records": 2937,
+      "records": 2936,
       "urls": 5709,
-      "duration_seconds": 519
+      "duration_seconds": 518
     },
     "DrainageCentral": {
       "status": "success",
-      "records": 27097,
+      "records": 27076,
       "urls": 3343,
-      "duration_seconds": 2548
+      "duration_seconds": 2735
     },
     "VictorianPlumbing": {
       "status": "success",
       "records": 24437,
       "urls": 24678,
-      "duration_seconds": 3976
+      "duration_seconds": 3385
     },
     "BoilerSparesUK": {
       "status": "success",
       "records": 55038,
       "urls": 81318,
-      "duration_seconds": 9994
+      "duration_seconds": 9990
     }
   }
 }
