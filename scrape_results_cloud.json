@@ -1,8 +1,8 @@
 {
-  "run_date": "2026-11-10",
-  "started_at": "2026-11-10T23:31:24.895434+00:00",
-  "finished_at": "2026-11-11T02:17:59.213898+00:00",
-  "duration_minutes": 166.6,
+  "run_date": "2026-11-11",
+  "started_at": "2026-11-11T23:31:33.478879+00:00",
+  "finished_at": "2026-11-12T02:18:22.116453+00:00",
+  "duration_minutes": 166.8,
   "total_scrapers": 26,
   "ran": 10,
   "succeeded": 9,
@@ -14,61 +14,61 @@
       "status": "failed",
       "records": 0,
       "urls": 96,
-      "duration_seconds": 8
+      "duration_seconds": 9
     },
     "Selco": {
       "status": "success",
-      "records": 3875,
+      "records": 1855,
       "urls": 758,
-      "duration_seconds": 56
+      "duration_seconds": 47
     },
     "BetterBathrooms": {
       "status": "success",
-      "records": 2304,
-      "urls": 2403,
-      "duration_seconds": 170
+      "records": 2266,
+      "urls": 2364,
+      "duration_seconds": 175
     },
     "Geberit": {
       "status": "success",
-      "records": 8630,
+      "records": 8628,
       "urls": 1816,
-      "duration_seconds": 176
+      "duration_seconds": 185
     },
     "PipeDreamFittings": {
       "status": "success",
       "records": 18704,
       "urls": 3717,
-      "duration_seconds": 279
+      "duration_seconds": 273
     },
     "DrainageFittings": {
       "status": "success",
       "records": 585,
       "urls": 648,
-      "duration_seconds": 445
+      "duration_seconds": 398
     },
     "Wavin": {
       "status": "success",
-      "records": 2936,
+      "records": 2908,
       "urls": 5696,
-      "duration_seconds": 585
+      "duration_seconds": 588
     },
     "DrainageCentral": {
       "status": "success",
       "records": 27076,
       "urls": 3343,
-      "duration_seconds": 2679
+      "duration_seconds": 2716
     },
     "VictorianPlumbing": {
       "status": "success",
-      "records": 24432,
-      "urls": 24675,
-      "duration_seconds": 3034
+      "records": 24428,
+      "urls": 24672,
+      "duration_seconds": 3000
     },
     "BoilerSparesUK": {
       "status": "success",
       "records": 55036,
       "urls": 81316,
-      "duration_seconds": 9987
+      "duration_seconds": 10001
     }
   }
 }
