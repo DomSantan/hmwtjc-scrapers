@@ -1,8 +1,8 @@
 {
-  "run_date": "2026-11-15",
-  "started_at": "2026-11-15T23:31:37.144875+00:00",
-  "finished_at": "2026-11-16T02:18:24.150742+00:00",
-  "duration_minutes": 166.8,
+  "run_date": "2026-11-16",
+  "started_at": "2026-11-16T23:31:27.931565+00:00",
+  "finished_at": "2026-11-17T02:17:58.268402+00:00",
+  "duration_minutes": 166.5,
   "total_scrapers": 26,
   "ran": 10,
   "succeeded": 8,
@@ -20,55 +20,55 @@
       "status": "failed",
       "records": 0,
       "urls": 96,
-      "duration_seconds": 4
+      "duration_seconds": 5
     },
     "Selco": {
       "status": "success",
-      "records": 770,
+      "records": 1376,
       "urls": 758,
-      "duration_seconds": 13
-    },
-    "Geberit": {
-      "status": "success",
-      "records": 8630,
-      "urls": 1816,
-      "duration_seconds": 122
+      "duration_seconds": 28
     },
     "PipeDreamFittings": {
       "status": "success",
       "records": 18704,
       "urls": 3717,
-      "duration_seconds": 160
+      "duration_seconds": 167
     },
-    "BetterBathrooms": {
+    "Geberit": {
       "status": "success",
-      "records": 2265,
-      "urls": 2364,
-      "duration_seconds": 250
+      "records": 8630,
+      "urls": 1815,
+      "duration_seconds": 189
     },
     "DrainageFittings": {
       "status": "success",
       "records": 585,
       "urls": 648,
-      "duration_seconds": 394
+      "duration_seconds": 399
+    },
+    "BetterBathrooms": {
+      "status": "success",
+      "records": 2272,
+      "urls": 2364,
+      "duration_seconds": 463
     },
     "Wavin": {
       "status": "success",
       "records": 2898,
-      "urls": 5696,
-      "duration_seconds": 570
+      "urls": 5650,
+      "duration_seconds": 549
     },
     "VictorianPlumbing": {
       "status": "success",
-      "records": 24434,
-      "urls": 24676,
-      "duration_seconds": 1871
+      "records": 24429,
+      "urls": 24671,
+      "duration_seconds": 3265
     },
     "BoilerSparesUK": {
       "status": "success",
-      "records": 55030,
-      "urls": 81307,
-      "duration_seconds": 10000
+      "records": 55029,
+      "urls": 81306,
+      "duration_seconds": 9983
     }
   }
 }
