@@ -1,8 +1,8 @@
 {
-  "run_date": "2026-11-22",
-  "started_at": "2026-11-22T23:31:31.803713+00:00",
-  "finished_at": "2026-11-23T03:15:34.320534+00:00",
-  "duration_minutes": 224.0,
+  "run_date": "2026-11-23",
+  "started_at": "2026-11-23T23:31:22.653156+00:00",
+  "finished_at": "2026-11-24T03:15:29.278480+00:00",
+  "duration_minutes": 224.1,
   "total_scrapers": 26,
   "ran": 15,
   "succeeded": 14,
@@ -14,43 +14,43 @@
       "status": "success",
       "records": 5405,
       "urls": 2502,
-      "duration_seconds": 124
+      "duration_seconds": 116
     },
     "DrainageSuperstore": {
       "status": "success",
-      "records": 1025,
+      "records": 1922,
       "urls": 6603,
-      "duration_seconds": 231
+      "duration_seconds": 242
     },
     "MaterialsMarket": {
       "status": "success",
       "records": 3033,
       "urls": 3103,
-      "duration_seconds": 327
+      "duration_seconds": 389
     },
     "PlasticPipeShop": {
       "status": "success",
-      "records": 2710,
+      "records": 4329,
       "urls": 4460,
-      "duration_seconds": 399
+      "duration_seconds": 510
     },
     "BandQ": {
       "status": "success",
-      "records": 1359,
+      "records": 1821,
       "urls": 211320,
       "duration_seconds": 1019
     },
     "PlumbNation": {
       "status": "success",
-      "records": 15903,
-      "urls": 15925,
-      "duration_seconds": 1694
+      "records": 15941,
+      "urls": 15951,
+      "duration_seconds": 1681
     },
     "Toolstation": {
       "status": "success",
       "records": 150797,
       "urls": 46669,
-      "duration_seconds": 1916
+      "duration_seconds": 1887
     },
     "Plumbworld": {
       "status": "failed",
@@ -62,43 +62,43 @@
       "status": "success",
       "records": 15608,
       "urls": 15641,
-      "duration_seconds": 1136
+      "duration_seconds": 1078
     },
     "HeatAndPlumb": {
       "status": "success",
       "records": 42668,
       "urls": 19313,
-      "duration_seconds": 1528
+      "duration_seconds": 1527
     },
     "PipeKit": {
       "status": "success",
-      "records": 19150,
+      "records": 18817,
       "urls": 4222,
-      "duration_seconds": 5182
+      "duration_seconds": 5166
     },
     "CityPlumbing": {
       "status": "success",
-      "records": 88032,
+      "records": 88023,
       "urls": 88303,
-      "duration_seconds": 5680
+      "duration_seconds": 6027
     },
     "BES": {
       "status": "success",
-      "records": 16437,
+      "records": 16436,
       "urls": 15078,
-      "duration_seconds": 9190
+      "duration_seconds": 9188
     },
     "Wickes": {
       "status": "success",
-      "records": 7244,
+      "records": 7240,
       "urls": 7251,
-      "duration_seconds": 8904
+      "duration_seconds": 8883
     },
     "Wolseley": {
       "status": "success",
       "records": 25240,
       "urls": 27109,
-      "duration_seconds": 12415
+      "duration_seconds": 12419
     }
   }
 }
